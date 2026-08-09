@@ -15,7 +15,7 @@
 // you deploy this frontend (e.g. https://yourdomain.com) — Stripe and
 // CORS both depend on that value matching your real site.
 
-window.CLIPSMITH_BACKEND_URL = 'http://localhost:4242';
+window.CLIPSMITH_BACKEND_URL = 'https://clipsmith-backend-production.up.railway.app';
 
 // URL of your local AI pipeline (clipsmith-ai-pipeline/pipeline.py),
 // running on your own machine's GPU via `uvicorn pipeline:app --port 8000`.
