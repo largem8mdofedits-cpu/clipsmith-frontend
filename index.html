@@ -1455,6 +1455,18 @@
         paywallNotice.classList.add('on');
         return false;
       }
+      // Paid plans have a monthly cap on minutes of source video (see
+      // PLAN_MONTHLY_MINUTES in server.js). This is a best-effort
+      // pre-check against the last numbers we fetched from the server —
+      // it stops an obviously-over-cap render before wasting time on it,
+      // but /api/consume-usage after the render is still the real
+      // enforcement (this job's own length isn't known until then).
+      if(currentUser.plan !== 'free' && currentUser.monthlyMinutesCap &&
+         (currentUser.monthlyMinutesUsed || 0) >= currentUser.monthlyMinutesCap){
+        paywallText.textContent = `You've used all ${currentUser.monthlyMinutesCap} minutes included in your plan this month — upgrade for more, or it resets next month.`;
+        paywallNotice.classList.add('on');
+        return false;
+      }
       return true;
     }
 
@@ -1467,13 +1479,13 @@
     // jobs — uploads never touch the proxy. Returns true if usage was
     // recorded (or the user isn't on the free plan), false if blocked —
     // in which case the paywall is already shown.
-    async function consumeUsageForClips(source, proxyMbUsed){
+    async function consumeUsageForClips(source, proxyMbUsed, sourceMinutes){
       if(!currentUser) return true;
       try{
         const res = await fetch(`${BACKEND_URL}/api/consume-usage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
-          body: JSON.stringify({ source, proxyMbUsed: proxyMbUsed || 0 })
+          body: JSON.stringify({ source, proxyMbUsed: proxyMbUsed || 0, sourceMinutes: sourceMinutes || 0 })
         });
         if(res.status === 402){
           const data = await res.json().catch(()=>({}));
@@ -1848,7 +1860,7 @@
           // proxy — an upload's source_bytes is the user's own file, not
           // proxy traffic, so it's never reported as proxyMbUsed.
           const proxyMbUsed = data.is_youtube ? (data.source_bytes || 0) / (1024*1024) : 0;
-          const allowed = await consumeUsageForClips(source, proxyMbUsed);
+          const allowed = await consumeUsageForClips(source, proxyMbUsed, data.source_minutes || 0);
           if(!allowed) return;
           enterRealMode(clips, data.job_id);
           workspace.scrollIntoView({behavior:'smooth', block:'nearest'});
