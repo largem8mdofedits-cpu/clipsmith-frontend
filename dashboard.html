@@ -82,16 +82,16 @@
 
     <div class="grid">
       <div class="card">
-        <h3>Free trial remaining</h3>
-        <div class="trial-amount" id="trialAmount">2 tries</div>
+        <h3 id="trialCardTitle">Free trial remaining</h3>
+        <div class="trial-amount" id="trialAmount">10 tries</div>
         <div class="trial-bar"><div class="fill" id="trialFill" style="width:100%;"></div></div>
-        <div class="trial-note" id="trialNote">One-time signup bonus — 1 clip generation, up to 10MB. Doesn't refill; subscribe to keep rendering after it's used.</div>
+        <div class="trial-note" id="trialNote">One-time signup bonus — 10 clips from uploaded video. Doesn't refill. YouTube-link clipping always requires a plan.</div>
       </div>
 
       <div class="card">
         <h3>Current plan</h3>
         <div class="plan-badge" id="planBadge">FREE</div>
-        <div class="plan-desc" id="planDesc">You're on the free trial. Upgrade any time to keep rendering after your hour runs out.</div>
+        <div class="plan-desc" id="planDesc">You're on the free trial. Upgrade any time to unlock YouTube-link clipping.</div>
         <div class="actions">
           <a href="index.html#pricing" class="btn btn-primary">Upgrade plan</a>
         </div>
@@ -117,7 +117,7 @@
   }
 
   const PLAN_INFO = {
-    free:    { label: 'Free',    desc: "You're on the free trial — 1 clip generation, up to 10MB. Upgrade any time to keep rendering after it runs out." },
+    free:    { label: 'Free',    desc: "You're on the free trial — 10 clips from uploaded video. YouTube-link clipping requires a plan. Upgrade any time to keep rendering after your uploads run out." },
     starter: { label: 'Starter', desc: '$19/mo — 150 minutes of source video a month, 1080p exports, no watermark.' },
     pro:     { label: 'Pro ★ Most popular', desc: '$49/mo — 500 minutes of source video a month, 4K exports, background removal, and the campaign marketplace.' },
     elite:   { label: 'Elite',   desc: '$129/mo — 2,000 minutes of source video a month, team workspace, and priority rendering.' },
@@ -147,19 +147,16 @@
       document.getElementById('greeting').textContent = `Welcome back, ${user.email.split('@')[0]}.`;
       document.getElementById('emailLine').textContent = user.email;
 
+      const FREE_UPLOAD_TRIES = 10;
       if(user.plan === 'free'){
-        const tries = user.freeTriesRemaining ?? 0;
-        const mb = user.freeMbRemaining ?? 0;
-        document.getElementById('trialAmount').textContent = `${tries} ${tries===1?'try':'tries'} · ${mb.toFixed(1)}MB`;
-        // Whichever runs out first is the real constraint — show the bar
-        // against that one (tries maxes at FREE_TRIES=1, MB at FREE_MB=10).
-        const triesPct = Math.max(0, Math.min(100, tries/1*100));
-        const mbPct = Math.max(0, Math.min(100, mb/10*100));
-        document.getElementById('trialFill').style.width = Math.min(triesPct, mbPct) + '%';
+        const tries = user.freeUploadTriesRemaining ?? 0;
+        document.getElementById('trialAmount').textContent = `${tries} upload ${tries===1?'try':'tries'}`;
+        document.getElementById('trialFill').style.width = Math.max(0, Math.min(100, tries/FREE_UPLOAD_TRIES*100)) + '%';
       } else {
-        document.getElementById('trialAmount').textContent = '—';
+        document.getElementById('trialCardTitle').textContent = 'Proxy bandwidth used';
+        document.getElementById('trialAmount').textContent = `${(user.totalProxyMbUsed || 0).toFixed(1)}MB`;
         document.getElementById('trialFill').style.width = '100%';
-        document.getElementById('trialNote').textContent = "You're on a paid plan — this meter doesn't apply to you.";
+        document.getElementById('trialNote').textContent = "Total bandwidth used through the proxy on YouTube-link clips, all time. Uploads don't count against this.";
       }
 
       const info = PLAN_INFO[user.plan] || PLAN_INFO.free;
