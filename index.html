@@ -125,6 +125,13 @@
 
   /* ===== Hero ===== */
   .hero{position:relative;padding:96px 0 64px;}
+  .hero::before{
+    content:'';position:absolute;top:-120px;left:50%;transform:translateX(-50%);
+    width:900px;height:520px;max-width:140vw;
+    background:radial-gradient(ellipse at center, rgba(255,90,31,0.16), rgba(255,90,31,0.05) 45%, transparent 72%);
+    pointer-events:none;z-index:0;filter:blur(2px);
+  }
+  .hero .wrap{position:relative;z-index:1;}
   .hero-grid{display:grid;grid-template-columns:1.05fr 0.95fr;gap:56px;align-items:center;}
   @media(max-width:900px){.hero-grid{grid-template-columns:1fr;}}
   .hero h1{font-size:clamp(40px,6vw,66px);margin:18px 0 22px;}
@@ -161,9 +168,22 @@
   }
   .clip-window .caption-chip{
     position:absolute;bottom:14%;left:50%;transform:translateX(-50%);
-    background:var(--paper);color:#120f0d;font-weight:700;font-size:11px;
-    padding:5px 10px;border-radius:3px;font-family:var(--font-display);text-transform:uppercase;
+    color:#fff;font-weight:800;font-size:12px;white-space:nowrap;
+    font-family:var(--font-display);text-transform:uppercase;letter-spacing:0.01em;
+    text-shadow:0 2px 6px rgba(0,0,0,0.8), 0 0 1px rgba(0,0,0,0.9);
   }
+  /* Mirrors the real karaoke caption behavior shipped in the AI pipeline —
+     words highlight from white to ember as they're "spoken", looping. */
+  .clip-window .caption-chip span{animation:karaoke-demo 2.6s ease-in-out infinite;}
+  .clip-window .caption-chip span:nth-child(1){animation-delay:0s;}
+  .clip-window .caption-chip span:nth-child(2){animation-delay:0.35s;}
+  .clip-window .caption-chip span:nth-child(3){animation-delay:0.7s;}
+  @keyframes karaoke-demo{
+    0%,8%{color:#fff;text-shadow:0 2px 6px rgba(0,0,0,0.8);}
+    18%,60%{color:var(--ember);text-shadow:0 0 14px rgba(255,90,31,0.65);}
+    85%,100%{color:#fff;text-shadow:0 2px 6px rgba(0,0,0,0.8);}
+  }
+  @media(prefers-reduced-motion:reduce){.clip-window .caption-chip span{animation:none;color:var(--ember);}}
   .waveform{display:flex;align-items:flex-end;gap:3px;padding:16px;height:70px;border-top:1px solid var(--line);}
   .waveform span{
     flex:1;background:var(--steel);opacity:0.55;border-radius:1px;
@@ -184,10 +204,15 @@
   @media(max-width:860px){.feature-grid{grid-template-columns:repeat(2,1fr);}}
   @media(max-width:560px){.feature-grid{grid-template-columns:1fr;}}
   .feature{
-    background:var(--void);padding:32px 28px;transition:background .2s;
+    background:var(--void);padding:32px 28px;transition:background .2s, transform .2s, box-shadow .2s;
     position:relative;
   }
-  .feature:hover{background:var(--panel);}
+  .feature::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:var(--ember);transform:scaleX(0);transform-origin:left;transition:transform .25s ease;
+  }
+  .feature:hover{background:var(--panel);transform:translateY(-3px);box-shadow:0 16px 32px -16px rgba(0,0,0,0.5);z-index:1;}
+  .feature:hover::before{transform:scaleX(1);}
   .feature .tc-mark{font-family:var(--font-mono);font-size:11px;color:var(--iron);}
   .feature h3{font-family:var(--font-body);text-transform:none;font-size:17px;font-weight:700;margin:14px 0 8px;letter-spacing:0;}
   .feature p{color:var(--iron);font-size:14.5px;}
@@ -269,7 +294,15 @@
     padding:6px 4px;outline:none;cursor:text;
   }
   .cap-overlay.style-bold{background:var(--paper);color:#120f0d;border-radius:3px;padding:6px 8px;}
-  .cap-overlay.style-karaoke{color:var(--ember-glow);text-shadow:0 2px 10px rgba(0,0,0,0.6);}
+  .cap-overlay.style-karaoke{
+    color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.7);
+    background:linear-gradient(90deg,var(--ember) 0%,var(--ember) var(--k,45%),#fff var(--k,45%),#fff 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    animation:karaoke-sweep 2.4s linear infinite;
+  }
+  @keyframes karaoke-sweep{0%{--k:0%}100%{--k:100%}}
+  @property --k{syntax:'<percentage>';inherits:true;initial-value:0%;}
+  @media(prefers-reduced-motion:reduce){.cap-overlay.style-karaoke{animation:none;--k:50%;}}
   .cap-overlay.style-meme{color:#fff;-webkit-text-stroke:1.5px #000;font-size:16px;}
   .cap-overlay.style-minimal{color:var(--paper);font-family:var(--font-body);text-transform:none;font-weight:600;font-size:13px;letter-spacing:0;background:rgba(0,0,0,0.35);border-radius:3px;padding:5px 8px;}
   .editor-phone .playbtn{
@@ -373,8 +406,9 @@
     padding:34px 28px;display:flex;flex-direction:column;position:relative;
     transition:border-color .2s, transform .2s;
   }
-  .plan:hover{border-color:var(--line-strong);transform:translateY(-4px);}
-  .plan.featured{border-color:var(--ember);background:var(--panel-2);}
+  .plan:hover{border-color:var(--line-strong);transform:translateY(-4px);box-shadow:0 20px 40px -20px rgba(0,0,0,0.55);}
+  .plan.featured{border-color:var(--ember);background:var(--panel-2);box-shadow:0 0 0 1px rgba(255,90,31,0.3), 0 24px 48px -20px rgba(255,90,31,0.25);}
+  .plan.featured:hover{box-shadow:0 0 0 1px rgba(255,90,31,0.4), 0 28px 56px -18px rgba(255,90,31,0.35);}
   .plan .badge{
     position:absolute;top:-13px;left:28px;background:var(--ember);color:#160c07;
     font-family:var(--font-mono);font-size:11px;letter-spacing:0.05em;
@@ -502,7 +536,7 @@
     </nav>
     <div class="nav-cta">
       <a href="javascript:void(0)" class="nav-signin" id="navAuthLink" onclick="openAuthModal('login')">Sign in</a>
-      <a href="#pricing" class="btn btn-primary">Start free hour</a>
+      <a href="#pricing" class="btn btn-primary">Start free this week</a>
     </div>
     <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
   </div>
@@ -542,7 +576,7 @@
       </div>
       <div class="modal-error" id="signupError"></div>
       <button type="submit" class="btn btn-primary btn-block">Create account</button>
-      <div class="modal-note">Includes 1 free hour of render time, no card needed.</div>
+      <div class="modal-note">Includes 1 free hour of render time every week, no card needed.</div>
     </form>
   </div>
 </div>
@@ -563,10 +597,10 @@
       <h1>Cut clips that <span>actually</span> hit.</h1>
       <p class="lede">Clipsmith turns podcasts, streams, and long-form video into scroll-stopping shorts — faster than Crayo, with more control, a built-in campaign marketplace, and no watermark ever.</p>
       <div class="hero-actions">
-        <a href="#pricing" class="btn btn-primary">Claim your free hour →</a>
+        <a href="#pricing" class="btn btn-primary">Claim this week's free hour →</a>
         <a href="#how" class="btn btn-ghost">See how it works</a>
       </div>
-      <div class="hero-note">✦ <b>1 hour of free render time</b> for every new account · no card required · full 1080p, zero watermark</div>
+      <div class="hero-note">✦ <b>1 hour of free render time, every week</b> · no card required · full 1080p, zero watermark</div>
     </div>
     <div class="clip-window reveal">
       <div class="titlebar">
@@ -575,7 +609,7 @@
       </div>
       <div class="stage">
         <div class="frame">
-          <div class="caption-chip">"this changed everything"</div>
+          <div class="caption-chip"><span>this</span> <span>changed</span> <span>everything</span></div>
         </div>
       </div>
       <div class="waveform">
@@ -620,11 +654,11 @@
   <div class="wrap">
     <div class="trial-banner reveal">
       <div>
-        <div class="eyebrow">NEW ACCOUNTS</div>
-        <h3>Your first hour of render time is on us.</h3>
-        <p>Full access from the moment you sign up — every caption style, voiceover language, and export size, at full 1080p with no watermark. No card needed to start.</p>
+        <div class="eyebrow">FREE, EVERY WEEK</div>
+        <h3>An hour of render time, on us — every single week.</h3>
+        <p>Full access from the moment you sign up — every caption style, voiceover language, and export size, at full 1080p with no watermark. Resets automatically every week, no card needed.</p>
       </div>
-      <div class="trial-timer">1:00:00<span>free render time</span></div>
+      <div class="trial-timer">1:00:00<span>free render time / week</span></div>
     </div>
   </div>
 </section>
@@ -887,11 +921,11 @@
     <div class="faq reveal">
       <details open>
         <summary>What happens after my free hour runs out?</summary>
-        <p>You'll be prompted to pick a plan before any further renders start — nothing renders or charges automatically once the free hour is used.</p>
+        <p>You'll be prompted to pick a plan before any further renders start that week — nothing renders or charges automatically. Your free hour refills again at the start of your next weekly cycle, for as long as you stay on the free plan.</p>
       </details>
       <details>
         <summary>Do exports have a watermark?</summary>
-        <p>No. Every plan, including your free trial hour, exports in full quality with no watermark.</p>
+        <p>No. Every plan, including your weekly free hour, exports in full quality with no watermark.</p>
       </details>
       <details>
         <summary>Can I cancel or switch plans anytime?</summary>
@@ -910,7 +944,7 @@
   <div class="wrap">
     <div class="reveal">
       <h2>Your next clip starts here.</h2>
-      <p>One free hour, no card, full quality. See what Clipsmith cuts for you.</p>
+      <p>One free hour every week, no card, full quality. See what Clipsmith cuts for you.</p>
       <a href="#pricing" class="btn btn-primary">Start your free hour →</a>
     </div>
   </div>
@@ -959,6 +993,18 @@
 <script src="config.js"></script>
 <script>
   const BACKEND_URL = window.CLIPSMITH_BACKEND_URL;
+
+  // Auth uses a bearer token (not cookies) so login works across the
+  // frontend/backend's different domains — see server.js for why cookies
+  // don't reliably survive that in modern browsers. Token lives in
+  // localStorage and rides along on every authenticated request.
+  function getToken(){ return localStorage.getItem('clipsmith_token'); }
+  function setToken(t){ localStorage.setItem('clipsmith_token', t); }
+  function clearToken(){ localStorage.removeItem('clipsmith_token'); }
+  function authHeaders(){
+    const t = getToken();
+    return t ? { 'Authorization': `Bearer ${t}` } : {};
+  }
 
   // reveal on scroll
   const io = new IntersectionObserver((entries)=>{
@@ -1179,7 +1225,7 @@
         return false;
       }
       if(currentUser.plan === 'free' && (currentUser.freeSecondsRemaining || 0) <= 0){
-        paywallText.textContent = "Your free hour is used up — subscribe to keep rendering clips.";
+        paywallText.textContent = "This week's free hour is used up — it refills next week, or subscribe to keep rendering now.";
         paywallNotice.classList.add('on');
         return false;
       }
@@ -1226,16 +1272,16 @@
           const renderedSeconds = Math.max(1, Math.round(trimEnd - trimStart));
           try{
             const res = await fetch(`${BACKEND_URL}/api/consume-time`, {
-              method: 'POST', credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...authHeaders() },
               body: JSON.stringify({ seconds: renderedSeconds })
             });
             if(res.status === 402){
               const data = await res.json();
               currentUser.freeSecondsRemaining = 0;
-              exportDone.textContent = '✗ Free hour used up.';
+              exportDone.textContent = '✗ Free hour used up — refills next week.';
               exportDone.classList.add('on');
-              paywallText.textContent = "Your free hour is used up — subscribe to keep rendering clips.";
+              paywallText.textContent = "This week's free hour is used up — it refills next week, or subscribe to keep rendering now.";
               paywallNotice.classList.add('on');
               return;
             } else if(res.ok){
@@ -1424,12 +1470,15 @@
   let currentUser = null;
 
   async function checkSession(){
+    if(!getToken()) return; // never signed in on this browser — skip the call
     try{
-      const res = await fetch(`${BACKEND_URL}/api/me`, { credentials: 'include' });
+      const res = await fetch(`${BACKEND_URL}/api/me`, { headers: authHeaders() });
       if(res.ok){
         currentUser = await res.json();
         document.getElementById('navAuthLink').textContent = currentUser.email.split('@')[0];
         document.getElementById('navAuthLink').setAttribute('onclick', "window.location.href='dashboard.html'");
+      } else if(res.status === 401){
+        clearToken(); // stale/expired token — stop sending it
       }
     }catch(err){ /* backend not running yet — fine, stays signed out */ }
   }
@@ -1443,12 +1492,13 @@
     errEl.classList.remove('on');
     try{
       const res = await fetch(`${BACKEND_URL}/api/signup`, {
-        method:'POST', credentials:'include',
+        method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({email, password})
       });
       const data = await res.json();
       if(!res.ok){ errEl.textContent = data.error || 'Could not create account'; errEl.classList.add('on'); return; }
+      setToken(data.token);
       window.location.href = 'dashboard.html';
     }catch(err){
       errEl.textContent = 'Could not reach the server. Is the Clipsmith backend running?';
@@ -1464,12 +1514,13 @@
     errEl.classList.remove('on');
     try{
       const res = await fetch(`${BACKEND_URL}/api/login`, {
-        method:'POST', credentials:'include',
+        method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({email, password})
       });
       const data = await res.json();
       if(!res.ok){ errEl.textContent = data.error || 'Could not sign in'; errEl.classList.add('on'); return; }
+      setToken(data.token);
       window.location.href = 'dashboard.html';
     }catch(err){
       errEl.textContent = 'Could not reach the server. Is the Clipsmith backend running?';
@@ -1487,7 +1538,7 @@
     try{
       const res = await fetch(`${BACKEND_URL}/api/create-checkout-session`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ plan, billing })
       });
       const data = await res.json();

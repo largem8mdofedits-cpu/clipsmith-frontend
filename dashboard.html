@@ -82,10 +82,10 @@
 
     <div class="grid">
       <div class="card">
-        <h3>Free render time remaining</h3>
+        <h3>Free render time remaining this week</h3>
         <div class="trial-amount" id="trialAmount">1:00:00</div>
         <div class="trial-bar"><div class="fill" id="trialFill" style="width:100%;"></div></div>
-        <div class="trial-note">Resets when you upgrade to a paid plan — paid plans don't run on the free-hour meter.</div>
+        <div class="trial-note" id="trialNote">Refills to a full hour every week on the free plan. Paid plans don't run on this meter at all.</div>
       </div>
 
       <div class="card">
@@ -130,11 +130,18 @@
     return [h,m,s].map(n=>String(n).padStart(2,'0')).join(':');
   }
 
+  // Same bearer-token auth as index.html — see server.js for why this
+  // isn't cookie-based (cross-domain cookies get blocked by browsers).
+  function getToken(){ return localStorage.getItem('clipsmith_token'); }
+  function clearToken(){ localStorage.removeItem('clipsmith_token'); }
+
   async function loadAccount(){
     showState('loadingState');
+    const token = getToken();
+    if(!token){ showState('errorState'); return; }
     try{
-      const res = await fetch(`${BACKEND_URL}/api/me`, { credentials: 'include' });
-      if(!res.ok){ showState('errorState'); return; }
+      const res = await fetch(`${BACKEND_URL}/api/me`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if(!res.ok){ clearToken(); showState('errorState'); return; }
       const user = await res.json();
 
       document.getElementById('greeting').textContent = `Welcome back, ${user.email.split('@')[0]}.`;
@@ -156,9 +163,11 @@
   }
 
   document.getElementById('signOutBtn').addEventListener('click', async ()=>{
+    const token = getToken();
     try{
-      await fetch(`${BACKEND_URL}/api/logout`, { method:'POST', credentials:'include' });
+      if(token) await fetch(`${BACKEND_URL}/api/logout`, { method:'POST', headers: { 'Authorization': `Bearer ${token}` } });
     }catch(err){ /* ignore */ }
+    clearToken();
     window.location.href = 'index.html';
   });
 
