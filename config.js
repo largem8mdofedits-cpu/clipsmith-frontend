@@ -17,9 +17,8 @@
 
 window.CLIPSMITH_BACKEND_URL = 'https://clipsmith-backend-production.up.railway.app';
 
-// URL of your local AI pipeline (clipsmith-ai-pipeline/pipeline.py),
-// running on your own machine's GPU via `uvicorn pipeline:app --port 8000`.
-// If this isn't reachable, the editor automatically falls back to the
-// sample demo instead of failing outright — so it's safe to leave this
-// pointed at localhost even before you've deployed anything else.
-window.CLIPSMITH_AI_PIPELINE_URL = 'https://observant-commitment-production-c6e9.up.railway.app';
+// URL of the deployed AI pipeline service (clipsmith-ai-pipeline/pipeline.py)
+// on Railway — cloud-hosted, no GPU required. If this isn't reachable, the
+// editor automatically falls back to the sample demo instead of failing
+// outright.
+window.CLIPSMITH_AI_PIPELINE_URL = 'https://clipsmith-ai-pipeline-production.up.railway.app';
