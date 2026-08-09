@@ -267,6 +267,13 @@
     cursor:pointer;
   }
   .editor-intake select:focus{outline:none;border-color:var(--ember);}
+  .editor-instruction-input{
+    flex-basis:100%;min-width:0 !important;
+    background:var(--void) !important;
+    border:1px dashed var(--line-strong) !important;
+    font-size:13.5px !important;
+  }
+  .editor-instruction-input:focus{border-style:solid !important;}
   .editor-status{
     font-family:var(--font-mono);font-size:12.5px;color:var(--ember-glow);margin-top:12px;
     display:none;align-items:center;gap:8px;
@@ -722,6 +729,8 @@
             <option value="60">60s</option>
           </select>
           <button type="submit" class="btn btn-primary" id="generateBtn">Generate clip</button>
+          <input type="text" id="editorInstruction" class="editor-instruction-input"
+                 placeholder="Tell the AI what to look for (optional) — e.g. &quot;find the funniest moment&quot; or &quot;focus on the part about pricing&quot;">
         </form>
         <div class="editor-status" id="editorStatus"><span class="spin"></span><span id="editorStatusText">Transcribing audio…</span></div>
         <div class="editor-status" id="paywallNotice" style="color:var(--ember-glow);"><span id="paywallText"></span> <a href="#pricing" onclick="closeEditorPaywall()" style="color:var(--ember);font-weight:700;margin-left:6px;">Upgrade →</a></div>
@@ -1354,23 +1363,36 @@
     }
 
     async function tryRealPipeline(url){
-      // Quick reachability check first (short timeout) so we fail fast to
-      // the demo instead of hanging if the local pipeline isn't running.
+      // Reachability check first. Railway's free tier lets services go
+      // cold when idle, so the first request after a quiet spell can take
+      // a while to wake up — a short timeout here was silently falling
+      // back to the demo on every cold start. Give it real time, and
+      // surface a real error instead of a silent null.
+      statusText.textContent = 'Waking up the AI pipeline…';
       try{
-        const ping = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/health`, { signal: AbortSignal.timeout(1500) });
-        if(!ping.ok) return null;
+        const ping = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/health`, { signal: AbortSignal.timeout(20000) });
+        if(!ping.ok){
+          throw new Error(`AI pipeline health check failed (status ${ping.status}). Try again in a few seconds.`);
+        }
       }catch(err){
-        return null; // pipeline not reachable — caller falls back to demo
+        console.warn('Clipsmith: pipeline unreachable.', err);
+        if(err.name === 'TimeoutError' || err.name === 'AbortError'){
+          throw new Error('The AI pipeline is taking longer than usual to wake up. Please try again in about 30 seconds.');
+        }
+        throw new Error(err.message || 'Could not reach the AI pipeline.');
       }
 
       const clipCount = parseInt(document.getElementById('clipCountSelect').value, 10);
       const clipSeconds = parseInt(document.getElementById('clipSecondsSelect').value, 10);
+      const instructionEl = document.getElementById('editorInstruction');
+      const instruction = instructionEl ? instructionEl.value.trim() : '';
 
       statusText.textContent = 'Downloading video…';
       const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/process`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, clip_count: clipCount, clip_seconds: clipSeconds })
+        signal: AbortSignal.timeout(600000), // long-running: download + transcribe + cut can take minutes
+        body: JSON.stringify({ url, clip_count: clipCount, clip_seconds: clipSeconds, instruction })
       });
       statusText.textContent = 'Transcribing and cutting…';
 
@@ -1393,7 +1415,7 @@
       const url = input.value.trim();
       genBtn.disabled = true;
       status.classList.add('on');
-      statusText.textContent = 'Checking for your local AI pipeline…';
+      statusText.textContent = 'Contacting AI pipeline…';
 
       try{
         const clips = url ? await tryRealPipeline(url) : null;
@@ -1410,7 +1432,7 @@
       }catch(err){
         status.classList.remove('on');
         genBtn.disabled = false;
-        paywallText.textContent = `Your local pipeline reached an error: ${err.message}`;
+        paywallText.textContent = `AI pipeline error: ${err.message}`;
         paywallNotice.classList.add('on');
         return;
       }
