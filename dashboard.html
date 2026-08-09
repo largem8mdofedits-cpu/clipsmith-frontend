@@ -61,7 +61,7 @@
 
 <header>
   <div class="wrap nav">
-    <a href="clipsmith.html" class="logo">CLIP<span class="dot">•</span>SMITH</a>
+    <a href="index.html" class="logo">CLIP<span class="dot">•</span>SMITH</a>
     <button class="btn" id="signOutBtn">Sign out</button>
   </div>
 </header>
@@ -72,7 +72,7 @@
   <div class="state" id="errorState">
     <div class="error-state">
       Couldn't load your account — you may not be signed in, or the backend isn't running.<br>
-      <a href="clipsmith.html">← Back to Clipsmith</a>
+      <a href="index.html">← Back to Clipsmith</a>
     </div>
   </div>
 
@@ -159,7 +159,7 @@
     try{
       await fetch(`${BACKEND_URL}/api/logout`, { method:'POST', credentials:'include' });
     }catch(err){ /* ignore */ }
-    window.location.href = 'clipsmith.html';
+    window.location.href = 'index.html';
   });
 
   loadAccount();
