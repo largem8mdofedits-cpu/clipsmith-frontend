@@ -82,10 +82,10 @@
 
     <div class="grid">
       <div class="card">
-        <h3>Free render time remaining this week</h3>
-        <div class="trial-amount" id="trialAmount">1:00:00</div>
+        <h3>Free trial remaining</h3>
+        <div class="trial-amount" id="trialAmount">2 tries</div>
         <div class="trial-bar"><div class="fill" id="trialFill" style="width:100%;"></div></div>
-        <div class="trial-note" id="trialNote">Refills to a full hour every week on the free plan. Paid plans don't run on this meter at all.</div>
+        <div class="trial-note" id="trialNote">One-time signup bonus — 1 clip generation, up to 10MB. Doesn't refill; subscribe to keep rendering after it's used.</div>
       </div>
 
       <div class="card">
@@ -117,10 +117,10 @@
   }
 
   const PLAN_INFO = {
-    free:    { label: 'Free',    desc: "You're on the free trial. Upgrade any time to keep rendering after your hour runs out." },
-    starter: { label: 'Starter', desc: '8 hours of render time a month, 1080p exports, no watermark.' },
-    pro:     { label: 'Pro',     desc: '30 hours a month, 4K exports, background removal, and the campaign marketplace.' },
-    elite:   { label: 'Elite',   desc: 'Unlimited render time, team workspace, and priority rendering.' },
+    free:    { label: 'Free',    desc: "You're on the free trial — 1 clip generation, up to 10MB. Upgrade any time to keep rendering after it runs out." },
+    starter: { label: 'Starter', desc: '$19/mo — 150 minutes of source video a month, 1080p exports, no watermark.' },
+    pro:     { label: 'Pro ★ Most popular', desc: '$49/mo — 500 minutes of source video a month, 4K exports, background removal, and the campaign marketplace.' },
+    elite:   { label: 'Elite',   desc: '$129/mo — 2,000 minutes of source video a month, team workspace, and priority rendering.' },
   };
 
   function fmtHMS(totalSeconds){
@@ -147,10 +147,20 @@
       document.getElementById('greeting').textContent = `Welcome back, ${user.email.split('@')[0]}.`;
       document.getElementById('emailLine').textContent = user.email;
 
-      const FREE_TRIAL_SECONDS = 3600;
-      const remaining = user.freeSecondsRemaining ?? 0;
-      document.getElementById('trialAmount').textContent = fmtHMS(remaining);
-      document.getElementById('trialFill').style.width = Math.max(0, Math.min(100, remaining/FREE_TRIAL_SECONDS*100)) + '%';
+      if(user.plan === 'free'){
+        const tries = user.freeTriesRemaining ?? 0;
+        const mb = user.freeMbRemaining ?? 0;
+        document.getElementById('trialAmount').textContent = `${tries} ${tries===1?'try':'tries'} · ${mb.toFixed(1)}MB`;
+        // Whichever runs out first is the real constraint — show the bar
+        // against that one (tries maxes at FREE_TRIES=1, MB at FREE_MB=10).
+        const triesPct = Math.max(0, Math.min(100, tries/1*100));
+        const mbPct = Math.max(0, Math.min(100, mb/10*100));
+        document.getElementById('trialFill').style.width = Math.min(triesPct, mbPct) + '%';
+      } else {
+        document.getElementById('trialAmount').textContent = '—';
+        document.getElementById('trialFill').style.width = '100%';
+        document.getElementById('trialNote').textContent = "You're on a paid plan — this meter doesn't apply to you.";
+      }
 
       const info = PLAN_INFO[user.plan] || PLAN_INFO.free;
       document.getElementById('planBadge').textContent = info.label.toUpperCase();
