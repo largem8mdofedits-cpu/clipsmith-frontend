@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clipsmith — Forge viral clips with AI</title>
+<meta name="description" content="Clipsmith turns podcasts, streams, and long-form video into scroll-stopping shorts — AI auto-clipping, captions, and a built-in campaign marketplace for clippers.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23120f0d'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='20' font-weight='700' fill='%23ff5a1f' text-anchor='middle'%3EC%3C/text%3E%3C/svg%3E">
+<meta property="og:title" content="Clipsmith — Forge viral clips with AI">
+<meta property="og:description" content="AI clipping built for people who clip for a living. Auto-cut, caption, and post — with a free first hour.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Clipsmith — Forge viral clips with AI">
+<meta name="twitter:description" content="AI clipping built for people who clip for a living. Auto-cut, caption, and post — with a free first hour.">
+<meta name="theme-color" content="#120f0d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#120f0d;
+    --panel:#1b1613;
+    --panel-2:#221c18;
+    --ember:#ff5a1f;
+    --ember-glow:#ff8a4c;
+    --steel:#7c93b0;
+    --paper:#f3eee6;
+    --iron:#9c948a;
+    --line:rgba(243,238,230,0.12);
+    --line-strong:rgba(243,238,230,0.22);
+    --font-display:'Oswald',sans-serif;
+    --font-body:'Inter',sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--void);
+    color:var(--paper);
+    font-family:var(--font-body);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  img,svg{display:block;max-width:100%;}
+  a{color:inherit;text-decoration:none;}
+  ul{list-style:none;}
+  button{font-family:inherit;cursor:pointer;}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:0 32px;}
+  @media(max-width:640px){.wrap{padding:0 20px;}}
+
+  h1,h2,h3,h4{font-family:var(--font-display);text-transform:uppercase;letter-spacing:0.01em;font-weight:700;line-height:1.05;}
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--ember);
+    display:flex;align-items:center;gap:10px;
+  }
+  .eyebrow::before{content:'';width:18px;height:1px;background:var(--ember);display:inline-block;}
+
+  /* ===== Timeline ruler — signature structural motif ===== */
+  .ruler{
+    position:relative;
+    height:34px;
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    overflow:hidden;
+    background:
+      repeating-linear-gradient(90deg,
+        var(--line) 0, var(--line) 1px,
+        transparent 1px, transparent 40px);
+  }
+  .ruler .playhead{
+    position:absolute;top:0;bottom:0;width:2px;background:var(--ember);
+    box-shadow:0 0 12px var(--ember-glow);
+    animation:scrub 14s linear infinite;
+  }
+  @keyframes scrub{0%{left:0%}100%{left:100%}}
+  .ruler .tc{
+    position:absolute;top:50%;transform:translateY(-50%);
+    font-family:var(--font-mono);font-size:11px;color:var(--iron);
+    letter-spacing:0.05em;
+  }
+  @media(prefers-reduced-motion:reduce){ .ruler .playhead{animation:none;left:30%;} }
+
+  /* ===== Nav ===== */
+  header{
+    position:sticky;top:0;z-index:50;
+    background:rgba(18,15,13,0.86);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav{display:flex;align-items:center;justify-content:space-between;height:74px;}
+  .logo{
+    font-family:var(--font-display);font-weight:700;font-size:21px;
+    letter-spacing:0.02em;text-transform:uppercase;
+    display:flex;align-items:center;gap:8px;
+  }
+  .logo .dot{color:var(--ember);}
+  .nav-links{display:flex;gap:36px;font-size:14px;font-weight:500;color:var(--iron);}
+  .nav-links a{transition:color .2s;}
+  .nav-links a:hover{color:var(--paper);}
+  .nav-cta{display:flex;align-items:center;gap:18px;}
+  .nav-signin{font-size:14px;color:var(--iron);transition:color .2s;}
+  .nav-signin:hover{color:var(--paper);}
+  .menu-btn{display:none;background:none;border:0;color:var(--paper);font-size:24px;}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    padding:13px 24px;border-radius:3px;font-weight:600;font-size:14px;
+    border:1px solid transparent;transition:transform .18s ease, box-shadow .18s ease, background .18s ease;
+    white-space:nowrap;
+  }
+  .btn-primary{background:var(--ember);color:#160c07;}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px -6px rgba(255,90,31,0.55);}
+  .btn-ghost{border-color:var(--line-strong);color:var(--paper);background:transparent;}
+  .btn-ghost:hover{border-color:var(--paper);}
+  .btn-block{width:100%;}
+
+  /* ===== Hero ===== */
+  .hero{position:relative;padding:96px 0 64px;}
+  .hero-grid{display:grid;grid-template-columns:1.05fr 0.95fr;gap:56px;align-items:center;}
+  @media(max-width:900px){.hero-grid{grid-template-columns:1fr;}}
+  .hero h1{font-size:clamp(40px,6vw,66px);margin:18px 0 22px;}
+  .hero h1 span{color:var(--ember);}
+  .hero p.lede{color:var(--iron);font-size:18px;max-width:520px;margin-bottom:34px;}
+  .hero-actions{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:28px;}
+  .hero-note{font-family:var(--font-mono);font-size:12.5px;color:var(--iron);letter-spacing:0.02em;}
+  .hero-note b{color:var(--ember-glow);font-weight:500;}
+
+  /* hero visual: waveform / clip window */
+  .clip-window{
+    background:var(--panel);border:1px solid var(--line);border-radius:6px;
+    overflow:hidden;box-shadow:0 30px 60px -20px rgba(0,0,0,0.6);
+  }
+  .clip-window .titlebar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px;border-bottom:1px solid var(--line);
+    font-family:var(--font-mono);font-size:11px;color:var(--iron);
+  }
+  .clip-window .titlebar .dots{display:flex;gap:6px;}
+  .clip-window .titlebar .dots span{width:8px;height:8px;border-radius:50%;background:var(--line-strong);}
+  .clip-window .stage{
+    aspect-ratio:16/10;background:
+      linear-gradient(160deg, #241d18 0%, #17130f 70%);
+    position:relative;display:flex;align-items:center;justify-content:center;
+  }
+  .clip-window .stage .frame{
+    width:52%;aspect-ratio:9/16;background:#0d0b09;border:1px solid var(--line-strong);
+    border-radius:8px;position:relative;overflow:hidden;
+  }
+  .clip-window .stage .frame::after{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(200deg, rgba(255,90,31,0.28), transparent 55%);
+  }
+  .clip-window .caption-chip{
+    position:absolute;bottom:14%;left:50%;transform:translateX(-50%);
+    background:var(--paper);color:#120f0d;font-weight:700;font-size:11px;
+    padding:5px 10px;border-radius:3px;font-family:var(--font-display);text-transform:uppercase;
+  }
+  .waveform{display:flex;align-items:flex-end;gap:3px;padding:16px;height:70px;border-top:1px solid var(--line);}
+  .waveform span{
+    flex:1;background:var(--steel);opacity:0.55;border-radius:1px;
+    animation:bounce 2.4s ease-in-out infinite;
+  }
+  .waveform span:nth-child(odd){background:var(--ember);opacity:0.85;}
+  @keyframes bounce{0%,100%{transform:scaleY(0.3)}50%{transform:scaleY(1)}}
+  @media(prefers-reduced-motion:reduce){.waveform span{animation:none;}}
+
+  /* ===== Section shell ===== */
+  section{padding:88px 0;}
+  .section-head{max-width:600px;margin-bottom:48px;}
+  .section-head h2{font-size:clamp(28px,4vw,42px);margin-top:14px;}
+  .section-head p{color:var(--iron);font-size:16px;margin-top:14px;}
+
+  /* ===== Features ===== */
+  .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);}
+  @media(max-width:860px){.feature-grid{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:560px){.feature-grid{grid-template-columns:1fr;}}
+  .feature{
+    background:var(--void);padding:32px 28px;transition:background .2s;
+    position:relative;
+  }
+  .feature:hover{background:var(--panel);}
+  .feature .tc-mark{font-family:var(--font-mono);font-size:11px;color:var(--iron);}
+  .feature h3{font-family:var(--font-body);text-transform:none;font-size:17px;font-weight:700;margin:14px 0 8px;letter-spacing:0;}
+  .feature p{color:var(--iron);font-size:14.5px;}
+  .feature .icon{width:34px;height:34px;margin-bottom:10px;color:var(--ember);}
+
+  /* ===== Free trial banner ===== */
+  .trial-banner{
+    background:linear-gradient(120deg, var(--panel) 0%, var(--panel-2) 100%);
+    border:1px solid var(--line-strong);
+    border-radius:8px;
+    padding:44px;
+    display:flex;align-items:center;justify-content:space-between;gap:32px;
+    position:relative;overflow:hidden;
+  }
+  @media(max-width:780px){.trial-banner{flex-direction:column;align-items:flex-start;}}
+  .trial-banner::before{
+    content:'';position:absolute;right:-60px;top:-60px;width:220px;height:220px;
+    background:radial-gradient(circle,var(--ember) 0%,transparent 70%);opacity:0.18;
+  }
+  .trial-banner h3{font-size:26px;max-width:480px;position:relative;}
+  .trial-banner p{color:var(--iron);margin-top:10px;max-width:440px;position:relative;font-size:15px;}
+  .trial-timer{
+    font-family:var(--font-mono);font-size:42px;color:var(--ember-glow);
+    border:1px solid var(--line-strong);padding:14px 22px;border-radius:6px;
+    background:rgba(0,0,0,0.25);flex-shrink:0;position:relative;
+  }
+  .trial-timer span{font-size:13px;color:var(--iron);display:block;text-align:center;margin-top:4px;font-family:var(--font-body);}
+
+  /* ===== How it works ===== */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;}
+  @media(max-width:860px){.steps{grid-template-columns:1fr;}}
+  .step{border-left:2px solid var(--line-strong);padding-left:22px;}
+  .step .tc-mark{font-family:var(--font-mono);color:var(--ember);font-size:13px;}
+  .step h3{font-family:var(--font-body);text-transform:none;font-size:18px;margin:10px 0 8px;letter-spacing:0;}
+  .step p{color:var(--iron);font-size:14.5px;}
+
+  /* ===== Editor tab ===== */
+  .editor-app{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;
+  }
+  .editor-intake{padding:26px 26px 24px;border-bottom:1px solid var(--line);}
+  .editor-intake form{display:flex;gap:10px;flex-wrap:wrap;}
+  .editor-intake input{
+    flex:1;min-width:220px;background:var(--void);border:1px solid var(--line-strong);
+    color:var(--paper);padding:13px 16px;border-radius:4px;font-size:14px;font-family:var(--font-body);
+  }
+  .editor-intake input::placeholder{color:var(--iron);}
+  .editor-intake input:focus{outline:none;border-color:var(--ember);}
+  .editor-intake select{
+    background:var(--void);border:1px solid var(--line-strong);color:var(--paper);
+    padding:13px 14px;border-radius:4px;font-size:13.5px;font-family:var(--font-body);
+    cursor:pointer;
+  }
+  .editor-intake select:focus{outline:none;border-color:var(--ember);}
+  .editor-status{
+    font-family:var(--font-mono);font-size:12.5px;color:var(--ember-glow);margin-top:12px;
+    display:none;align-items:center;gap:8px;
+  }
+  .editor-status.on{display:flex;}
+  .editor-status .spin{
+    width:11px;height:11px;border-radius:50%;border:2px solid var(--line-strong);
+    border-top-color:var(--ember);animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .editor-workspace{display:none;grid-template-columns:340px 1fr;}
+  .editor-workspace.on{display:grid;}
+  @media(max-width:860px){.editor-workspace.on{grid-template-columns:1fr;}}
+
+  .editor-preview-col{padding:28px;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;}
+  @media(max-width:860px){.editor-preview-col{border-right:0;border-bottom:1px solid var(--line);}}
+  .editor-phone{
+    width:100%;max-width:250px;aspect-ratio:9/16;background:linear-gradient(165deg,#241d18,#100d0a 75%);
+    border:1px solid var(--line-strong);border-radius:14px;position:relative;overflow:hidden;
+  }
+  .editor-phone .cap-overlay{
+    position:absolute;left:8%;right:8%;bottom:16%;text-align:center;
+    font-family:var(--font-display);text-transform:uppercase;font-weight:700;font-size:15px;
+    padding:6px 4px;outline:none;cursor:text;
+  }
+  .cap-overlay.style-bold{background:var(--paper);color:#120f0d;border-radius:3px;padding:6px 8px;}
+  .cap-overlay.style-karaoke{color:var(--ember-glow);text-shadow:0 2px 10px rgba(0,0,0,0.6);}
+  .cap-overlay.style-meme{color:#fff;-webkit-text-stroke:1.5px #000;font-size:16px;}
+  .cap-overlay.style-minimal{color:var(--paper);font-family:var(--font-body);text-transform:none;font-weight:600;font-size:13px;letter-spacing:0;background:rgba(0,0,0,0.35);border-radius:3px;padding:5px 8px;}
+  .editor-phone .playbtn{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.3);
+    display:flex;align-items:center;justify-content:center;color:var(--paper);font-size:15px;
+  }
+  .editor-phone .playbtn:hover{background:rgba(0,0,0,0.6);}
+  .editor-preview-controls{display:flex;align-items:center;gap:10px;margin-top:16px;width:100%;max-width:250px;}
+  .editor-preview-controls .time{font-family:var(--font-mono);font-size:11px;color:var(--iron);white-space:nowrap;}
+  .mini-bar{flex:1;height:4px;background:var(--line-strong);border-radius:2px;position:relative;overflow:hidden;}
+  .mini-bar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--ember);width:0%;}
+
+  .editor-tools{padding:24px 28px;}
+  .editor-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:20px;flex-wrap:wrap;}
+  .editor-tab-btn{
+    background:none;border:0;color:var(--iron);font-size:13.5px;font-weight:600;
+    padding:10px 4px;margin-right:20px;border-bottom:2px solid transparent;
+  }
+  .editor-tab-btn.active{color:var(--paper);border-bottom-color:var(--ember);}
+  .editor-panel{display:none;}
+  .editor-panel.active{display:block;}
+
+  .cap-row{
+    display:flex;gap:12px;align-items:flex-start;padding:10px 10px;border-radius:5px;
+    border:1px solid transparent;cursor:pointer;margin-bottom:4px;
+  }
+  .cap-row:hover{background:var(--panel-2);}
+  .cap-row.active{border-color:var(--line-strong);background:var(--panel-2);}
+  .cap-row .cap-tc{font-family:var(--font-mono);font-size:11px;color:var(--ember);flex-shrink:0;margin-top:4px;}
+  .cap-row .cap-text{
+    flex:1;font-size:14px;outline:none;border-bottom:1px dashed transparent;
+  }
+  .cap-row .cap-text:focus{border-bottom-color:var(--line-strong);}
+
+  .style-swatches{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  .style-swatch{
+    border:1px solid var(--line-strong);border-radius:5px;padding:14px 10px;text-align:center;
+    font-size:12.5px;font-weight:600;color:var(--iron);background:var(--void);
+  }
+  .style-swatch.active{border-color:var(--ember);color:var(--paper);background:var(--panel-2);}
+
+  .music-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line);}
+  .music-row:last-child{border-bottom:0;}
+  .switch{width:38px;height:22px;border-radius:12px;background:var(--line-strong);position:relative;flex-shrink:0;border:0;}
+  .switch::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--paper);transition:transform .2s;}
+  .switch.on{background:var(--ember);}
+  .switch.on::after{transform:translateX(16px);}
+
+  .export-box{text-align:center;padding:18px 0;}
+  .export-progress{height:6px;background:var(--void);border:1px solid var(--line-strong);border-radius:3px;overflow:hidden;margin:18px 0;display:none;}
+  .export-progress.on{display:block;}
+  .export-progress .fill{height:100%;width:0%;background:var(--ember);transition:width .1s linear;}
+  .export-done{display:none;color:var(--ember-glow);font-family:var(--font-mono);font-size:13px;margin-top:10px;}
+  .export-done.on{display:block;}
+
+  .editor-timeline{padding:0 28px 28px;}
+  .editor-timeline .label-row{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;color:var(--iron);margin-bottom:8px;}
+  .trim-track{position:relative;height:52px;border-radius:5px;overflow:hidden;background:var(--void);border:1px solid var(--line-strong);}
+  .trim-track .wf{position:absolute;inset:0;display:flex;align-items:center;gap:2px;padding:0 6px;}
+  .trim-track .wf span{flex:1;background:var(--steel);opacity:0.4;border-radius:1px;}
+  .trim-mask{position:absolute;top:0;bottom:0;background:rgba(18,15,13,0.72);}
+  .trim-mask.left{left:0;}
+  .trim-mask.right{right:0;}
+  .trim-selected-range{position:absolute;top:0;bottom:0;border-left:2px solid var(--ember);border-right:2px solid var(--ember);background:rgba(255,90,31,0.08);}
+  .trim-handle{
+    position:absolute;top:0;bottom:0;width:14px;background:var(--ember);cursor:ew-resize;
+    display:flex;align-items:center;justify-content:center;touch-action:none;
+  }
+  .trim-handle::after{content:'';width:2px;height:16px;background:#160c07;border-radius:1px;}
+  .cap-ticks{position:relative;height:14px;margin-top:6px;}
+  .clip-pill{
+    border:1px solid var(--line-strong);background:var(--void);color:var(--iron);
+    padding:6px 10px;border-radius:20px;font-size:11.5px;font-family:var(--font-mono);
+  }
+  .clip-pill.active{border-color:var(--ember);color:var(--paper);background:var(--panel-2);}
+  .real-badge{
+    display:inline-block;background:var(--ember);color:#160c07;font-family:var(--font-mono);
+    font-size:10.5px;font-weight:700;text-transform:uppercase;padding:3px 8px;border-radius:3px;
+    letter-spacing:0.04em;margin-bottom:10px;
+  }
+  .cap-tick{position:absolute;top:0;width:2px;height:8px;background:var(--line-strong);}
+  .playhead-mini{position:absolute;top:0;bottom:0;width:2px;background:var(--paper);pointer-events:none;left:0;}
+
+  /* ===== Pricing ===== */
+  .billing-toggle{
+    display:inline-flex;align-items:center;gap:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:30px;padding:5px;margin-bottom:44px;
+  }
+  .billing-toggle button{
+    border:0;background:transparent;color:var(--iron);padding:9px 18px;border-radius:24px;
+    font-size:13.5px;font-weight:600;transition:all .2s;
+  }
+  .billing-toggle button.active{background:var(--ember);color:#160c07;}
+  .save-tag{font-family:var(--font-mono);font-size:11px;color:var(--ember-glow);margin-left:2px;}
+
+  .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:stretch;}
+  @media(max-width:900px){.pricing-grid{grid-template-columns:1fr;max-width:420px;margin:0 auto;}}
+  .plan{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:34px 28px;display:flex;flex-direction:column;position:relative;
+    transition:border-color .2s, transform .2s;
+  }
+  .plan:hover{border-color:var(--line-strong);transform:translateY(-4px);}
+  .plan.featured{border-color:var(--ember);background:var(--panel-2);}
+  .plan .badge{
+    position:absolute;top:-13px;left:28px;background:var(--ember);color:#160c07;
+    font-family:var(--font-mono);font-size:11px;letter-spacing:0.05em;
+    padding:4px 10px;border-radius:3px;text-transform:uppercase;font-weight:600;
+  }
+  .plan .tier{font-family:var(--font-display);text-transform:uppercase;font-size:14px;letter-spacing:0.08em;color:var(--iron);}
+  .plan.featured .tier{color:var(--ember-glow);}
+  .plan .price{font-family:var(--font-display);font-size:44px;margin:14px 0 4px;}
+  .plan .price sup{font-size:16px;font-weight:400;color:var(--iron);}
+  .plan .per{color:var(--iron);font-size:13px;margin-bottom:22px;}
+  .plan ul{margin:22px 0 28px;display:flex;flex-direction:column;gap:12px;flex:1;}
+  .plan li{display:flex;gap:10px;font-size:14px;color:var(--paper);align-items:flex-start;}
+  .plan li::before{content:'';flex-shrink:0;width:6px;height:6px;background:var(--ember);margin-top:6px;border-radius:1px;}
+  .plan li.muted{color:var(--iron);}
+  .plan li.muted::before{background:var(--line-strong);}
+
+  /* ===== Payment methods ===== */
+  .pay-row{
+    margin-top:52px;padding-top:36px;border-top:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;
+  }
+  .pay-row .label{font-family:var(--font-mono);font-size:12px;color:var(--iron);letter-spacing:0.06em;text-transform:uppercase;}
+  .pay-badges{display:flex;gap:10px;flex-wrap:wrap;}
+  .pay-badge{
+    border:1px solid var(--line-strong);padding:8px 14px;border-radius:4px;
+    font-size:12.5px;font-weight:600;color:var(--iron);letter-spacing:0.02em;
+  }
+
+  /* ===== Testimonials ===== */
+  .quotes{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
+  @media(max-width:860px){.quotes{grid-template-columns:1fr;}}
+  .quote{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:26px;}
+  .quote .cap{
+    display:inline-block;background:var(--paper);color:#120f0d;font-family:var(--font-display);
+    font-size:11px;text-transform:uppercase;padding:3px 8px;border-radius:2px;margin-bottom:14px;
+  }
+  .quote p{font-size:15px;color:var(--paper);margin-bottom:16px;}
+  .quote .who{font-family:var(--font-mono);font-size:12px;color:var(--iron);}
+
+  /* ===== FAQ ===== */
+  .faq{max-width:760px;}
+  .faq details{border-bottom:1px solid var(--line);padding:20px 0;}
+  .faq summary{
+    cursor:pointer;font-weight:600;font-size:15.5px;list-style:none;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .faq summary::-webkit-details-marker{display:none;}
+  .faq summary::after{content:'+';color:var(--ember);font-size:20px;font-weight:400;}
+  .faq details[open] summary::after{content:'−';}
+  .faq p{color:var(--iron);font-size:14.5px;margin-top:12px;max-width:640px;}
+
+  /* ===== Final CTA ===== */
+  .final-cta{text-align:center;padding:100px 0;}
+  .final-cta h2{font-size:clamp(32px,5vw,54px);}
+  .final-cta p{color:var(--iron);max-width:480px;margin:16px auto 32px;}
+
+  /* ===== Footer ===== */
+  footer{border-top:1px solid var(--line);padding:48px 0 32px;}
+  .foot-grid{display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap;margin-bottom:36px;}
+  .foot-brand p{color:var(--iron);font-size:13.5px;max-width:260px;margin-top:12px;}
+  .foot-links h4{font-family:var(--font-body);text-transform:none;font-size:13px;color:var(--iron);letter-spacing:0.04em;margin-bottom:14px;}
+  .foot-links ul{display:flex;flex-direction:column;gap:10px;}
+  .foot-links a{font-size:14px;color:var(--paper);opacity:0.85;transition:opacity .2s;}
+  .foot-links a:hover{opacity:1;color:var(--ember-glow);}
+  .foot-cols{display:flex;gap:56px;flex-wrap:wrap;}
+  .foot-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;padding-top:24px;border-top:1px solid var(--line);}
+  .foot-bottom p{font-size:12.5px;color:var(--iron);font-family:var(--font-mono);}
+
+  /* reveal animation */
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease, transform .6s ease;}
+  .reveal.in{opacity:1;transform:translateY(0);}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
+
+  @media(max-width:860px){
+    .nav-links{display:none;}
+    .menu-btn{display:block;}
+  }
+  .nav-links.mobile-open{
+    display:flex;flex-direction:column;position:absolute;top:74px;left:0;right:0;
+    background:var(--void);border-bottom:1px solid var(--line);padding:18px 32px;gap:18px;z-index:60;
+  }
+
+  /* ===== Auth modal ===== */
+  .modal-overlay{
+    display:none;position:fixed;inset:0;background:rgba(10,8,7,0.7);z-index:100;
+    align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);
+  }
+  .modal-overlay.on{display:flex;}
+  .modal-box{
+    background:var(--panel);border:1px solid var(--line-strong);border-radius:8px;
+    width:100%;max-width:380px;padding:32px;position:relative;
+  }
+  .modal-close{position:absolute;top:16px;right:16px;background:none;border:0;color:var(--iron);font-size:20px;}
+  .modal-close:hover{color:var(--paper);}
+  .modal-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:22px;}
+  .modal-tab-btn{
+    background:none;border:0;color:var(--iron);font-size:14px;font-weight:600;
+    padding:10px 4px;margin-right:22px;border-bottom:2px solid transparent;
+  }
+  .modal-tab-btn.active{color:var(--paper);border-bottom-color:var(--ember);}
+  .modal-panel{display:none;flex-direction:column;gap:14px;}
+  .modal-panel.active{display:flex;}
+  .modal-panel label{font-size:12.5px;color:var(--iron);font-family:var(--font-mono);letter-spacing:0.03em;}
+  .modal-panel input{
+    width:100%;background:var(--void);border:1px solid var(--line-strong);color:var(--paper);
+    padding:12px 14px;border-radius:4px;font-size:14px;margin-top:6px;
+  }
+  .modal-panel input:focus{outline:none;border-color:var(--ember);}
+  .modal-error{color:var(--ember-glow);font-size:13px;display:none;font-family:var(--font-mono);}
+  .modal-error.on{display:block;}
+  .modal-note{font-size:12px;color:var(--iron);text-align:center;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <div class="logo">CLIP<span class="dot">•</span>SMITH</div>
+    <nav class="nav-links" id="navLinks">
+      <a href="#features">Features</a>
+      <a href="#editor">Editor</a>
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="nav-cta">
+      <a href="javascript:void(0)" class="nav-signin" id="navAuthLink" onclick="openAuthModal('login')">Sign in</a>
+      <a href="#pricing" class="btn btn-primary">Start free hour</a>
+    </div>
+    <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
+  </div>
+</header>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeAuthModal()">✕</button>
+    <div class="modal-tabs">
+      <button class="modal-tab-btn active" data-modal-tab="login" onclick="switchAuthTab('login')">Sign in</button>
+      <button class="modal-tab-btn" data-modal-tab="signup" onclick="switchAuthTab('signup')">Create account</button>
+    </div>
+
+    <form class="modal-panel active" data-modal-panel="login" id="loginForm">
+      <div>
+        <label>Email</label>
+        <input type="email" id="loginEmail" required placeholder="you@email.com">
+      </div>
+      <div>
+        <label>Password</label>
+        <input type="password" id="loginPassword" required placeholder="••••••••">
+      </div>
+      <div class="modal-error" id="loginError"></div>
+      <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+      <div class="modal-note">No account yet? <a href="javascript:void(0)" onclick="switchAuthTab('signup')" style="color:var(--ember-glow);">Create one</a></div>
+    </form>
+
+    <form class="modal-panel" data-modal-panel="signup" id="signupForm">
+      <div>
+        <label>Email</label>
+        <input type="email" id="signupEmail" required placeholder="you@email.com">
+      </div>
+      <div>
+        <label>Password</label>
+        <input type="password" id="signupPassword" required placeholder="At least 8 characters" minlength="8">
+      </div>
+      <div class="modal-error" id="signupError"></div>
+      <button type="submit" class="btn btn-primary btn-block">Create account</button>
+      <div class="modal-note">Includes 1 free hour of render time, no card needed.</div>
+    </form>
+  </div>
+</div>
+
+<div class="ruler">
+  <div class="playhead"></div>
+  <span class="tc" style="left:4%">00:00:00</span>
+  <span class="tc" style="left:29%">00:00:14</span>
+  <span class="tc" style="left:54%">00:00:31</span>
+  <span class="tc" style="left:79%">00:00:47</span>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">AI CLIPPING, RE-FORGED</div>
+      <h1>Cut clips that <span>actually</span> hit.</h1>
+      <p class="lede">Clipsmith turns podcasts, streams, and long-form video into scroll-stopping shorts — faster than Crayo, with more control, a built-in campaign marketplace, and no watermark ever.</p>
+      <div class="hero-actions">
+        <a href="#pricing" class="btn btn-primary">Claim your free hour →</a>
+        <a href="#how" class="btn btn-ghost">See how it works</a>
+      </div>
+      <div class="hero-note">✦ <b>1 hour of free render time</b> for every new account · no card required · full 1080p, zero watermark</div>
+    </div>
+    <div class="clip-window reveal">
+      <div class="titlebar">
+        <span>podcast_ep114_raw.mp4</span>
+        <div class="dots"><span></span><span></span><span></span></div>
+      </div>
+      <div class="stage">
+        <div class="frame">
+          <div class="caption-chip">"this changed everything"</div>
+        </div>
+      </div>
+      <div class="waveform">
+        <span style="height:40%"></span><span style="height:70%"></span><span style="height:30%"></span>
+        <span style="height:90%"></span><span style="height:50%"></span><span style="height:65%"></span>
+        <span style="height:35%"></span><span style="height:80%"></span><span style="height:45%"></span>
+        <span style="height:60%"></span><span style="height:95%"></span><span style="height:38%"></span>
+        <span style="height:55%"></span><span style="height:72%"></span><span style="height:42%"></span>
+        <span style="height:85%"></span><span style="height:33%"></span><span style="height:66%"></span>
+        <span style="height:48%"></span><span style="height:77%"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="ruler"><div class="playhead" style="animation-duration:18s;"></div></div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">Everything Crayo has, and what it's missing</div>
+      <h2>Built for people who clip for a living.</h2>
+      <p>Every tool a clipper actually reaches for, in one workspace — plus the parts other tools leave out.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature reveal"><div class="tc-mark">00:00:01</div><h3>Auto Clip AI</h3><p>Drop in a 3-hour stream and get the 12 strongest moments back, ranked by predicted retention — not just loudness spikes.</p></div>
+      <div class="feature reveal"><div class="tc-mark">00:00:02</div><h3>Batch queue</h3><p>Upload up to 25 source videos at once and let Clipsmith process them overnight. Crayo makes you do this one at a time.</p></div>
+      <div class="feature reveal"><div class="tc-mark">00:00:03</div><h3>25+ caption styles</h3><p>Karaoke, bold-pop, meme-stack, and fully custom presets you can save and re-use across every future clip.</p></div>
+      <div class="feature reveal"><div class="tc-mark">00:00:04</div><h3>AI voiceover, 48 languages</h3><p>Dub or narrate in a voice that matches your channel's tone, with automatic lip-sync alignment.</p></div>
+      <div class="feature reveal"><div class="tc-mark">00:00:05</div><h3>Clean background removal</h3><p>Pull a speaker off a busy backdrop in one click, no green screen required.</p></div>
+      <div class="feature reveal"><div class="tc-mark">00:00:06</div><h3>Campaign marketplace</h3><p>Browse paid clipping campaigns with source footage attached, submit clips, and track your view payouts in one dashboard.</p></div>
+      <div class="feature reveal"><div class="tc-mark">00:00:07</div><h3>One-click reframe</h3><p>Bounce between 9:16, 1:1, and 16:9 with subject tracking that keeps the speaker centred automatically.</p></div>
+      <div class="feature reveal"><div class="tc-mark">00:00:08</div><h3>Direct scheduling</h3><p>Queue finished clips straight to TikTok, Reels, and Shorts with posting times Clipsmith recommends per platform.</p></div>
+      <div class="feature reveal"><div class="tc-mark">00:00:09</div><h3>Team workspace</h3><p>Share a project with editors or an agency, leave timestamped comments, and approve cuts before they go out.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- FREE TRIAL -->
+<section>
+  <div class="wrap">
+    <div class="trial-banner reveal">
+      <div>
+        <div class="eyebrow">NEW ACCOUNTS</div>
+        <h3>Your first hour of render time is on us.</h3>
+        <p>Full access from the moment you sign up — every caption style, voiceover language, and export size, at full 1080p with no watermark. No card needed to start.</p>
+      </div>
+      <div class="trial-timer">1:00:00<span>free render time</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="ruler"><div class="playhead" style="animation-duration:11s;"></div></div>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">Three cuts, start to post</div>
+      <h2>From raw footage to posted clip.</h2>
+    </div>
+    <div class="steps">
+      <div class="step reveal">
+        <div class="tc-mark">00:00:00 — IMPORT</div>
+        <h3>Drop in a file or paste a link</h3>
+        <p>Upload a video, or paste a YouTube, Twitch, or podcast link. Clipsmith pulls it in and starts scanning for standout moments right away.</p>
+      </div>
+      <div class="step reveal">
+        <div class="tc-mark">00:00:14 — FORGE</div>
+        <h3>Let AI cut, or cut it yourself</h3>
+        <p>Auto Clip finds the best 8–15 moments, or open the manual timeline and cut exactly what you want, with captions and reframing applied live.</p>
+      </div>
+      <div class="step reveal">
+        <div class="tc-mark">00:00:31 — SHIP</div>
+        <h3>Export and post everywhere</h3>
+        <p>Render in 4K with zero watermark, then schedule straight to TikTok, Reels, and Shorts — or download and post it yourself.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="ruler"><div class="playhead" style="animation-duration:13s;"></div></div>
+
+<!-- EDITOR -->
+<section id="editor">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">Try it right now</div>
+      <h2>Paste a link, get a captioned clip. Then edit it like you would in CapCut.</h2>
+      <p>Clipsmith auto-generates a captioned, reframed clip in seconds — then hands you a real timeline to trim, restyle captions, and adjust before you export.</p>
+    </div>
+
+    <div class="editor-app reveal">
+      <div class="editor-intake">
+        <div class="eyebrow" style="margin-bottom:16px;">Live preview — sample clip</div>
+        <form id="editorForm">
+          <input type="text" id="editorInput" placeholder="Paste a YouTube, Twitch, or podcast link…">
+          <select id="clipCountSelect" title="Number of clips">
+            <option value="1">1 clip</option>
+            <option value="2" selected>2 clips</option>
+            <option value="3">3 clips</option>
+            <option value="4">4 clips</option>
+          </select>
+          <select id="clipSecondsSelect" title="Clip length">
+            <option value="15">15s</option>
+            <option value="20" selected>20s</option>
+            <option value="30">30s</option>
+            <option value="45">45s</option>
+            <option value="60">60s</option>
+          </select>
+          <button type="submit" class="btn btn-primary" id="generateBtn">Generate clip</button>
+        </form>
+        <div class="editor-status" id="editorStatus"><span class="spin"></span><span id="editorStatusText">Transcribing audio…</span></div>
+        <div class="editor-status" id="paywallNotice" style="color:var(--ember-glow);"><span id="paywallText"></span> <a href="#pricing" onclick="closeEditorPaywall()" style="color:var(--ember);font-weight:700;margin-left:6px;">Upgrade →</a></div>
+      </div>
+
+      <div class="editor-workspace" id="editorWorkspace">
+        <div class="editor-preview-col">
+          <div class="editor-phone" id="editorPhone">
+            <video id="realClipVideo" controls playsinline style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;"></video>
+            <div class="playbtn" id="playBtn">▶</div>
+            <div class="cap-overlay style-bold" id="capOverlay" contenteditable="true" spellcheck="false">okay so here's the thing</div>
+          </div>
+          <div class="editor-preview-controls">
+            <span class="time" id="timeNow">0:00</span>
+            <div class="mini-bar"><div class="fill" id="miniFill"></div></div>
+            <span class="time" id="timeTotal">0:12</span>
+          </div>
+          <div id="clipSwitcher" style="display:none;flex-wrap:wrap;gap:8px;margin-top:14px;width:100%;max-width:250px;"></div>
+        </div>
+
+        <div class="editor-tools">
+          <div class="real-badge" id="modeBadge" style="display:none;">Real clip — your GPU</div>
+          <div class="editor-tabs">
+            <button class="editor-tab-btn active" data-tab="captions">Captions</button>
+            <button class="editor-tab-btn" data-tab="style">Style</button>
+            <button class="editor-tab-btn" data-tab="music">Music</button>
+            <button class="editor-tab-btn" data-tab="export">Export</button>
+          </div>
+
+          <div class="editor-panel active" data-panel="captions" id="captionList"></div>
+
+          <div class="editor-panel" data-panel="style">
+            <div class="style-swatches">
+              <button class="style-swatch active" data-style="style-bold">Bold Pop</button>
+              <button class="style-swatch" data-style="style-karaoke">Karaoke</button>
+              <button class="style-swatch" data-style="style-meme">Meme Stack</button>
+              <button class="style-swatch" data-style="style-minimal">Minimal</button>
+            </div>
+          </div>
+
+          <div class="editor-panel" data-panel="music">
+            <div class="music-row">
+              <span>Background music</span>
+              <button class="switch" id="musicSwitch"></button>
+            </div>
+            <div class="music-row">
+              <span>Auto-duck under speech</span>
+              <button class="switch on" id="duckSwitch"></button>
+            </div>
+          </div>
+
+          <div class="editor-panel" data-panel="export">
+            <div class="export-box">
+              <button class="btn btn-primary btn-block" id="exportBtn">Export 1080p, no watermark</button>
+              <div class="export-progress" id="exportProgress"><div class="fill" id="exportFill"></div></div>
+              <div class="export-done" id="exportDone">✓ Ready — clip.mp4</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="editor-timeline" id="editorTimeline" style="display:none;">
+        <div class="label-row">
+          <span>Trim</span>
+          <span id="trimLabel">0:00 – 0:12 selected</span>
+        </div>
+        <div class="trim-track" id="trimTrack">
+          <div class="wf" id="trimWaveform"></div>
+          <div class="trim-mask left" id="maskLeft"></div>
+          <div class="trim-mask right" id="maskRight"></div>
+          <div class="trim-selected-range" id="selectedRange"></div>
+          <div class="trim-handle" id="handleLeft" style="left:0%;"></div>
+          <div class="trim-handle" id="handleRight" style="left:calc(100% - 14px);"></div>
+          <div class="playhead-mini" id="playheadMini"></div>
+        </div>
+        <div class="cap-ticks" id="capTicks"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">Plans</div>
+      <h2>Start free. Upgrade when you outgrow it.</h2>
+      <p>Every plan keeps your first hour of render time free. After that, pick the tier that matches how much you clip.</p>
+    </div>
+
+    <div class="billing-toggle reveal">
+      <button class="active" id="btn-monthly">Monthly</button>
+      <button id="btn-yearly">Yearly <span class="save-tag">save 20%</span></button>
+    </div>
+
+    <div class="pricing-grid reveal">
+      <div class="plan">
+        <div class="tier">Starter</div>
+        <div class="price"><sup>$</sup><span class="amt" data-m="15" data-y="12">15</span></div>
+        <div class="per">per month, billed <span class="term">monthly</span></div>
+        <ul>
+          <li>8 hours of render time / month</li>
+          <li>1080p exports, no watermark</li>
+          <li>25+ caption styles</li>
+          <li>AI voiceover — 10 languages</li>
+          <li class="muted">Background removal</li>
+          <li class="muted">Campaign marketplace access</li>
+        </ul>
+        <a href="javascript:void(0)" class="btn btn-ghost btn-block" onclick="startCheckout('starter', this)">Get Starter</a>
+      </div>
+
+      <div class="plan featured">
+        <div class="badge">Most popular</div>
+        <div class="tier">Pro</div>
+        <div class="price"><sup>$</sup><span class="amt" data-m="39" data-y="31">39</span></div>
+        <div class="per">per month, billed <span class="term">monthly</span></div>
+        <ul>
+          <li>30 hours of render time / month</li>
+          <li>4K exports, no watermark</li>
+          <li>All caption styles + custom presets</li>
+          <li>AI voiceover — 48 languages</li>
+          <li>Background removal</li>
+          <li>Campaign marketplace access</li>
+          <li>Batch upload, up to 25 videos</li>
+        </ul>
+        <a href="javascript:void(0)" class="btn btn-primary btn-block" onclick="startCheckout('pro', this)">Get Pro</a>
+      </div>
+
+      <div class="plan">
+        <div class="tier">Elite</div>
+        <div class="price"><sup>$</sup><span class="amt" data-m="89" data-y="71">89</span></div>
+        <div class="per">per month, billed <span class="term">monthly</span></div>
+        <ul>
+          <li>Unlimited render time</li>
+          <li>4K/8K exports, no watermark</li>
+          <li>Everything in Pro</li>
+          <li>Team workspace — 5 seats</li>
+          <li>Priority render queue</li>
+          <li>API access</li>
+          <li>Dedicated support line</li>
+        </ul>
+        <a href="javascript:void(0)" class="btn btn-ghost btn-block" onclick="startCheckout('elite', this)">Get Elite</a>
+      </div>
+    </div>
+
+    <div class="pay-row reveal">
+      <div class="label">Accepted payment methods</div>
+      <div class="pay-badges">
+        <span class="pay-badge">Visa</span>
+        <span class="pay-badge">Mastercard</span>
+        <span class="pay-badge">Amex</span>
+        <span class="pay-badge">PayPal</span>
+        <span class="pay-badge">Apple Pay</span>
+        <span class="pay-badge">Google Pay</span>
+        <span class="pay-badge">USDC</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="ruler"><div class="playhead" style="animation-duration:16s;"></div></div>
+
+<!-- TESTIMONIALS -->
+<section>
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">From the clip floor</div>
+      <h2>Clippers switched, and stayed.</h2>
+    </div>
+    <div class="quotes">
+      <div class="quote reveal">
+        <span class="cap">clip caption</span>
+        <p>"I clip for three different creators and the batch queue alone saves me an evening every week."</p>
+        <div class="who">— Freelance clipper, 400K views/mo</div>
+      </div>
+      <div class="quote reveal">
+        <span class="cap">clip caption</span>
+        <p>"Found my first two paid campaigns inside the marketplace tab. Didn't have to DM a single Discord mod."</p>
+        <div class="who">— New clipper, joined via Starter plan</div>
+      </div>
+      <div class="quote reveal">
+        <span class="cap">clip caption</span>
+        <p>"The background removal is the first one I've used that doesn't leave a halo around hair."</p>
+        <div class="who">— Editor, gaming clip agency</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">Questions</div>
+      <h2>Good to know.</h2>
+    </div>
+    <div class="faq reveal">
+      <details open>
+        <summary>What happens after my free hour runs out?</summary>
+        <p>You'll be prompted to pick a plan before any further renders start — nothing renders or charges automatically once the free hour is used.</p>
+      </details>
+      <details>
+        <summary>Do exports have a watermark?</summary>
+        <p>No. Every plan, including your free trial hour, exports in full quality with no watermark.</p>
+      </details>
+      <details>
+        <summary>Can I cancel or switch plans anytime?</summary>
+        <p>Yes — upgrade, downgrade, or cancel from your billing settings whenever you like. Changes apply from your next billing cycle.</p>
+      </details>
+      <details>
+        <summary>What's the campaign marketplace?</summary>
+        <p>A feed of active paid clipping campaigns with source footage already attached, so you can start cutting and submitting without hunting for gigs elsewhere.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final-cta">
+  <div class="wrap">
+    <div class="reveal">
+      <h2>Your next clip starts here.</h2>
+      <p>One free hour, no card, full quality. See what Clipsmith cuts for you.</p>
+      <a href="#pricing" class="btn btn-primary">Start your free hour →</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <div class="logo">CLIP<span class="dot">•</span>SMITH</div>
+        <p>AI clipping built for people who clip for a living — not just a hobby weekend project.</p>
+      </div>
+      <div class="foot-cols">
+        <div class="foot-links">
+          <h4>Product</h4>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#pricing">Pricing</a></li>
+            <li><a href="#how">How it works</a></li>
+          </ul>
+        </div>
+        <div class="foot-links">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="javascript:void(0)">About</a></li>
+            <li><a href="javascript:void(0)">Careers</a></li>
+            <li><a href="javascript:void(0)">Contact</a></li>
+          </ul>
+        </div>
+        <div class="foot-links">
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="terms.html">Terms</a></li>
+            <li><a href="privacy.html">Privacy</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <p>© 2026 CLIPSMITH. ALL RIGHTS RESERVED.</p>
+      <p>MADE FOR CLIPPERS, BY CLIPPERS.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="config.js"></script>
+<script>
+  const BACKEND_URL = window.CLIPSMITH_BACKEND_URL;
+
+  // reveal on scroll
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, {threshold:0.15});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  // billing toggle
+  const btnM = document.getElementById('btn-monthly');
+  const btnY = document.getElementById('btn-yearly');
+  function setBilling(mode){
+    document.querySelectorAll('.amt').forEach(el=>{
+      el.textContent = mode === 'yearly' ? el.dataset.y : el.dataset.m;
+    });
+    document.querySelectorAll('.term').forEach(el=>{
+      el.textContent = mode === 'yearly' ? 'yearly' : 'monthly';
+    });
+    btnM.classList.toggle('active', mode==='monthly');
+    btnY.classList.toggle('active', mode==='yearly');
+  }
+  btnM.addEventListener('click', ()=>setBilling('monthly'));
+  btnY.addEventListener('click', ()=>setBilling('yearly'));
+
+  // ===== Editor =====
+  (function(){
+    const DURATION = 12;
+    let captions = [
+      {start:0,   end:2.6,  text:"okay so here's the thing"},
+      {start:2.6, end:5.4,  text:"nobody tells you about this"},
+      {start:5.4, end:8.2,  text:"until it's already too late"},
+      {start:8.2, end:12,   text:"and that changed everything"}
+    ];
+
+    let trimStart = 0, trimEnd = DURATION;
+    let currentTime = 0, isPlaying = false, playTimer = null;
+    let activeStyle = 'style-bold';
+
+    const form = document.getElementById('editorForm');
+    const input = document.getElementById('editorInput');
+    const genBtn = document.getElementById('generateBtn');
+    const status = document.getElementById('editorStatus');
+    const statusText = document.getElementById('editorStatusText');
+    const workspace = document.getElementById('editorWorkspace');
+    const timelineEl = document.getElementById('editorTimeline');
+    const capOverlay = document.getElementById('capOverlay');
+    const playBtn = document.getElementById('playBtn');
+    const miniFill = document.getElementById('miniFill');
+    const timeNow = document.getElementById('timeNow');
+    const timeTotal = document.getElementById('timeTotal');
+    const captionList = document.getElementById('captionList');
+    const capTicks = document.getElementById('capTicks');
+    const trimTrack = document.getElementById('trimTrack');
+    const handleLeft = document.getElementById('handleLeft');
+    const handleRight = document.getElementById('handleRight');
+    const selectedRange = document.getElementById('selectedRange');
+    const maskLeft = document.getElementById('maskLeft');
+    const maskRight = document.getElementById('maskRight');
+    const trimLabel = document.getElementById('trimLabel');
+    const playheadMini = document.getElementById('playheadMini');
+    const trimWaveform = document.getElementById('trimWaveform');
+
+    function fmt(t){
+      const m = Math.floor(t/60), s = Math.floor(t%60);
+      return m+':'+String(s).padStart(2,'0');
+    }
+
+    // build waveform bars once
+    for(let i=0;i<40;i++){
+      const bar = document.createElement('span');
+      bar.style.height = (25+Math.random()*70)+'%';
+      trimWaveform.appendChild(bar);
+    }
+
+    function renderCaptionList(){
+      captionList.innerHTML = '';
+      captions.forEach((c,i)=>{
+        const row = document.createElement('div');
+        row.className = 'cap-row';
+        row.dataset.index = i;
+        row.innerHTML = `<span class="cap-tc">${fmt(c.start)}</span><span class="cap-text" contenteditable="true" spellcheck="false">${c.text}</span>`;
+        captionList.appendChild(row);
+
+        row.querySelector('.cap-text').addEventListener('input', (e)=>{
+          captions[i].text = e.target.textContent;
+          if(getActiveIndex() === i){ capOverlay.textContent = captions[i].text; }
+        });
+        row.addEventListener('click', (e)=>{
+          if(e.target.classList.contains('cap-text')) return;
+          seekTo(c.start);
+        });
+      });
+      renderTicks();
+    }
+
+    function renderTicks(){
+      capTicks.innerHTML = '';
+      captions.forEach(c=>{
+        const t = document.createElement('div');
+        t.className = 'cap-tick';
+        t.style.left = (c.start/DURATION*100)+'%';
+        capTicks.appendChild(t);
+      });
+    }
+
+    function getActiveIndex(){
+      return captions.findIndex(c=> currentTime >= c.start && currentTime < c.end);
+    }
+
+    function updatePreview(){
+      const idx = getActiveIndex();
+      if(idx > -1 && document.activeElement !== capOverlay){
+        capOverlay.textContent = captions[idx].text;
+      }
+      miniFill.style.width = (currentTime/DURATION*100)+'%';
+      timeNow.textContent = fmt(currentTime);
+      playheadMini.style.left = (currentTime/DURATION*100)+'%';
+      document.querySelectorAll('.cap-row').forEach((row,i)=>{
+        row.classList.toggle('active', i === idx);
+      });
+    }
+
+    function seekTo(t){
+      currentTime = Math.max(trimStart, Math.min(trimEnd, t));
+      updatePreview();
+    }
+
+    function togglePlay(){
+      isPlaying = !isPlaying;
+      playBtn.textContent = isPlaying ? '❚❚' : '▶';
+      if(isPlaying){
+        playTimer = setInterval(()=>{
+          currentTime += 0.1;
+          if(currentTime >= trimEnd){ currentTime = trimStart; }
+          updatePreview();
+        }, 100);
+      } else {
+        clearInterval(playTimer);
+      }
+    }
+    playBtn.addEventListener('click', togglePlay);
+
+    // tabs
+    document.querySelectorAll('.editor-tab-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('.editor-tab-btn').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.editor-panel').forEach(p=>p.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelector(`.editor-panel[data-panel="${btn.dataset.tab}"]`).classList.add('active');
+      });
+    });
+
+    // style swatches
+    document.querySelectorAll('.style-swatch').forEach(sw=>{
+      sw.addEventListener('click', ()=>{
+        document.querySelectorAll('.style-swatch').forEach(s=>s.classList.remove('active'));
+        sw.classList.add('active');
+        capOverlay.classList.remove(activeStyle);
+        activeStyle = sw.dataset.style;
+        capOverlay.classList.add(activeStyle);
+      });
+    });
+
+    // switches
+    document.querySelectorAll('.switch').forEach(sw=>{
+      sw.addEventListener('click', ()=> sw.classList.toggle('on'));
+    });
+
+    // trim handles
+    function pctFromEvent(e){
+      const rect = trimTrack.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      let pct = (clientX - rect.left) / rect.width;
+      return Math.max(0, Math.min(1, pct));
+    }
+    function updateTrimVisual(){
+      const lp = trimStart/DURATION*100, rp = trimEnd/DURATION*100;
+      handleLeft.style.left = `calc(${lp}% - ${lp>0?14:0}px)`;
+      handleRight.style.left = `calc(${rp}% - ${rp<100?0:14}px)`;
+      selectedRange.style.left = lp+'%';
+      selectedRange.style.right = (100-rp)+'%';
+      maskLeft.style.width = lp+'%';
+      maskRight.style.width = (100-rp)+'%';
+      trimLabel.textContent = `${fmt(trimStart)} – ${fmt(trimEnd)} selected`;
+    }
+    function dragHandle(handle, isLeft){
+      handle.addEventListener('pointerdown', (e)=>{
+        handle.setPointerCapture(e.pointerId);
+        function onMove(ev){
+          const pct = pctFromEvent(ev);
+          const t = pct * DURATION;
+          if(isLeft){ trimStart = Math.min(t, trimEnd - 1); trimStart = Math.max(0, trimStart); }
+          else { trimEnd = Math.max(t, trimStart + 1); trimEnd = Math.min(DURATION, trimEnd); }
+          updateTrimVisual();
+        }
+        function onUp(){
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+        }
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      });
+    }
+    dragHandle(handleLeft, true);
+    dragHandle(handleRight, false);
+
+    // ===== Paywall =====
+    const paywallNotice = document.getElementById('paywallNotice');
+    const paywallText = document.getElementById('paywallText');
+    function closeEditorPaywall(){ paywallNotice.classList.remove('on'); }
+    window.closeEditorPaywall = closeEditorPaywall;
+
+    // Returns true if the action is allowed to proceed. Otherwise shows the
+    // right prompt (sign in, or upgrade) and returns false.
+    function checkUsageAllowed(){
+      paywallNotice.classList.remove('on');
+      if(!currentUser){
+        openAuthModal('signup');
+        return false;
+      }
+      if(currentUser.plan === 'free' && (currentUser.freeSecondsRemaining || 0) <= 0){
+        paywallText.textContent = "Your free hour is used up — subscribe to keep rendering clips.";
+        paywallNotice.classList.add('on');
+        return false;
+      }
+      return true;
+    }
+
+    // export
+    const exportBtn = document.getElementById('exportBtn');
+    const exportProgress = document.getElementById('exportProgress');
+    const exportFill = document.getElementById('exportFill');
+    const exportDone = document.getElementById('exportDone');
+    let currentRealClipIndex = -1;
+
+    exportBtn.addEventListener('click', async ()=>{
+      if(!checkUsageAllowed()) return;
+
+      // Real clip already exists on disk from the pipeline — just download it,
+      // no need to fake a render.
+      if(currentRealClipIndex > -1 && realClips[currentRealClipIndex]){
+        const clip = realClips[currentRealClipIndex];
+        const a = document.createElement('a');
+        a.href = `${window.CLIPSMITH_AI_PIPELINE_URL}${clip.url}`;
+        a.download = clip.file || 'clip.mp4';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        exportDone.textContent = '✓ Downloaded';
+        exportDone.classList.add('on');
+        return;
+      }
+
+      exportDone.classList.remove('on');
+      exportProgress.classList.add('on');
+      exportFill.style.width = '0%';
+      exportBtn.disabled = true;
+      let p = 0;
+      const t = setInterval(async ()=>{
+        p += 6 + Math.random()*8;
+        if(p >= 100){
+          p = 100;
+          clearInterval(t);
+          exportBtn.disabled = false;
+
+          const renderedSeconds = Math.max(1, Math.round(trimEnd - trimStart));
+          try{
+            const res = await fetch(`${BACKEND_URL}/api/consume-time`, {
+              method: 'POST', credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ seconds: renderedSeconds })
+            });
+            if(res.status === 402){
+              const data = await res.json();
+              currentUser.freeSecondsRemaining = 0;
+              exportDone.textContent = '✗ Free hour used up.';
+              exportDone.classList.add('on');
+              paywallText.textContent = "Your free hour is used up — subscribe to keep rendering clips.";
+              paywallNotice.classList.add('on');
+              return;
+            } else if(res.ok){
+              const updated = await res.json();
+              currentUser = updated;
+              exportDone.textContent = `✓ Ready — clip.mp4 (${Math.floor(updated.freeSecondsRemaining/60)}m free time left)`;
+            } else {
+              exportDone.textContent = '✓ Ready — clip.mp4';
+            }
+          }catch(err){
+            exportDone.textContent = '✓ Ready — clip.mp4';
+          }
+          exportDone.classList.add('on');
+        }
+        exportFill.style.width = p+'%';
+      }, 120);
+    });
+
+    // ===== Real pipeline + demo fallback =====
+    const realClipVideo = document.getElementById('realClipVideo');
+    const clipSwitcher = document.getElementById('clipSwitcher');
+    const modeBadge = document.getElementById('modeBadge');
+    let realClips = [];
+
+    function enterDemoMode(){
+      currentRealClipIndex = -1;
+      modeBadge.style.display = 'none';
+      realClipVideo.style.display = 'none';
+      realClipVideo.pause();
+      playBtn.style.display = 'flex';
+      capOverlay.style.display = 'block';
+      capOverlay.setAttribute('contenteditable', 'true');
+      clipSwitcher.style.display = 'none';
+      exportBtn.textContent = 'Export 1080p, no watermark';
+    }
+
+    function showRealClip(index){
+      const clip = realClips[index];
+      if(!clip) return;
+      currentRealClipIndex = index;
+      realClipVideo.src = `${window.CLIPSMITH_AI_PIPELINE_URL}${clip.url}`;
+      realClipVideo.style.display = 'block';
+      playBtn.style.display = 'none';
+      capOverlay.style.display = 'none';
+      timeTotal.textContent = fmt(clip.end - clip.start);
+      clipSwitcher.querySelectorAll('.clip-pill').forEach((p,i)=> p.classList.toggle('active', i===index));
+
+      exportDone.classList.remove('on');
+      exportProgress.classList.remove('on');
+      exportBtn.textContent = 'Download clip.mp4';
+    }
+
+    function enterRealMode(clips){
+      realClips = clips;
+      modeBadge.style.display = 'inline-block';
+      clipSwitcher.innerHTML = '';
+      clips.forEach((c,i)=>{
+        const pill = document.createElement('button');
+        pill.className = 'clip-pill';
+        pill.textContent = `Clip ${i+1} · ${fmt(c.start)}–${fmt(c.end)}`;
+        pill.addEventListener('click', ()=> showRealClip(i));
+        clipSwitcher.appendChild(pill);
+      });
+      clipSwitcher.style.display = 'flex';
+      showRealClip(0);
+
+      // captions/style/music tabs don't apply to a finished, already-rendered
+      // real clip — point people at the export tab instead.
+      captionList.innerHTML = '<div style="color:var(--iron);font-size:13.5px;">Captions are already burned into this real clip. Generate again for a different cut.</div>';
+    }
+
+    async function tryRealPipeline(url){
+      // Quick reachability check first (short timeout) so we fail fast to
+      // the demo instead of hanging if the local pipeline isn't running.
+      try{
+        const ping = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/health`, { signal: AbortSignal.timeout(1500) });
+        if(!ping.ok) return null;
+      }catch(err){
+        return null; // pipeline not reachable — caller falls back to demo
+      }
+
+      const clipCount = parseInt(document.getElementById('clipCountSelect').value, 10);
+      const clipSeconds = parseInt(document.getElementById('clipSecondsSelect').value, 10);
+
+      statusText.textContent = 'Downloading video…';
+      const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, clip_count: clipCount, clip_seconds: clipSeconds })
+      });
+      statusText.textContent = 'Transcribing and cutting…';
+
+      if(!res.ok){
+        // FastAPI's HTTPException responses come back as {"detail": "..."},
+        // not {"error": "..."} — reading the wrong field here would silently
+        // swallow every real backend error message.
+        const err = await res.json().catch(()=>({detail:'Unknown error'}));
+        throw new Error(err.detail || 'Pipeline request failed');
+      }
+      const data = await res.json();
+      return data.clips || [];
+    }
+
+    // generate flow
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      if(!checkUsageAllowed()) return;
+
+      const url = input.value.trim();
+      genBtn.disabled = true;
+      status.classList.add('on');
+      statusText.textContent = 'Checking for your local AI pipeline…';
+
+      try{
+        const clips = url ? await tryRealPipeline(url) : null;
+
+        if(clips && clips.length){
+          status.classList.remove('on');
+          genBtn.disabled = false;
+          workspace.classList.add('on');
+          timelineEl.style.display = 'none'; // real clips are already trimmed/finished
+          enterRealMode(clips);
+          workspace.scrollIntoView({behavior:'smooth', block:'nearest'});
+          return;
+        }
+      }catch(err){
+        status.classList.remove('on');
+        genBtn.disabled = false;
+        paywallText.textContent = `Your local pipeline reached an error: ${err.message}`;
+        paywallNotice.classList.add('on');
+        return;
+      }
+
+      // Fallback: local pipeline not reachable (or no link pasted) — run the demo.
+      runDemoGeneration();
+    });
+
+    function runDemoGeneration(){
+      const demoSteps = ['Transcribing audio…','Finding the best moments…','Reframing to 9:16…','Burning in captions…'];
+      genBtn.disabled = true;
+      status.classList.add('on');
+      let i = 0;
+      statusText.textContent = demoSteps[0];
+      const stepTimer = setInterval(()=>{
+        i++;
+        if(i < demoSteps.length){ statusText.textContent = demoSteps[i]; }
+        else{
+          clearInterval(stepTimer);
+          status.classList.remove('on');
+          genBtn.disabled = false;
+          workspace.classList.add('on');
+          timelineEl.style.display = 'block';
+          enterDemoMode();
+          trimStart = 0; trimEnd = DURATION; currentTime = 0;
+          updateTrimVisual();
+          renderCaptionList();
+          updatePreview();
+          workspace.scrollIntoView({behavior:'smooth', block:'nearest'});
+        }
+      }, 550);
+    }
+
+    updateTrimVisual();
+  })();
+
+  // ===== Mobile menu =====
+  const menuBtn = document.getElementById('menuBtn');
+  const navLinks = document.getElementById('navLinks');
+  menuBtn.addEventListener('click', ()=> navLinks.classList.toggle('mobile-open'));
+  navLinks.querySelectorAll('a').forEach(a=> a.addEventListener('click', ()=> navLinks.classList.remove('mobile-open')));
+
+  // ===== Auth modal =====
+  const authModal = document.getElementById('authModal');
+  function openAuthModal(tab){
+    if(currentUser){ window.location.href = 'dashboard.html'; return; }
+    authModal.classList.add('on');
+    switchAuthTab(tab || 'login');
+  }
+  function closeAuthModal(){ authModal.classList.remove('on'); }
+  authModal.addEventListener('click', (e)=>{ if(e.target === authModal) closeAuthModal(); });
+  function switchAuthTab(tab){
+    document.querySelectorAll('.modal-tab-btn').forEach(b=> b.classList.toggle('active', b.dataset.modalTab===tab));
+    document.querySelectorAll('.modal-panel').forEach(p=> p.classList.toggle('active', p.dataset.modalPanel===tab));
+  }
+
+  let currentUser = null;
+
+  async function checkSession(){
+    try{
+      const res = await fetch(`${BACKEND_URL}/api/me`, { credentials: 'include' });
+      if(res.ok){
+        currentUser = await res.json();
+        document.getElementById('navAuthLink').textContent = currentUser.email.split('@')[0];
+        document.getElementById('navAuthLink').setAttribute('onclick', "window.location.href='dashboard.html'");
+      }
+    }catch(err){ /* backend not running yet — fine, stays signed out */ }
+  }
+  checkSession();
+
+  document.getElementById('signupForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const email = document.getElementById('signupEmail').value;
+    const password = document.getElementById('signupPassword').value;
+    const errEl = document.getElementById('signupError');
+    errEl.classList.remove('on');
+    try{
+      const res = await fetch(`${BACKEND_URL}/api/signup`, {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({email, password})
+      });
+      const data = await res.json();
+      if(!res.ok){ errEl.textContent = data.error || 'Could not create account'; errEl.classList.add('on'); return; }
+      window.location.href = 'dashboard.html';
+    }catch(err){
+      errEl.textContent = 'Could not reach the server. Is the Clipsmith backend running?';
+      errEl.classList.add('on');
+    }
+  });
+
+  document.getElementById('loginForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    const errEl = document.getElementById('loginError');
+    errEl.classList.remove('on');
+    try{
+      const res = await fetch(`${BACKEND_URL}/api/login`, {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({email, password})
+      });
+      const data = await res.json();
+      if(!res.ok){ errEl.textContent = data.error || 'Could not sign in'; errEl.classList.add('on'); return; }
+      window.location.href = 'dashboard.html';
+    }catch(err){
+      errEl.textContent = 'Could not reach the server. Is the Clipsmith backend running?';
+      errEl.classList.add('on');
+    }
+  });
+
+  // ===== Stripe checkout =====
+  async function startCheckout(plan, clicked){
+    const billing = btnY.classList.contains('active') ? 'yearly' : 'monthly';
+    const originalText = clicked.textContent;
+    clicked.textContent = 'Redirecting…';
+    clicked.style.pointerEvents = 'none';
+
+    try{
+      const res = await fetch(`${BACKEND_URL}/api/create-checkout-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan, billing })
+      });
+      const data = await res.json();
+      if(data.url){
+        window.location.href = data.url;
+      } else {
+        alert('Could not start checkout: ' + (data.error || 'unknown error'));
+        clicked.textContent = originalText;
+        clicked.style.pointerEvents = '';
+      }
+    } catch(err){
+      alert('Could not reach the payment server. Make sure the Clipsmith backend is running and CLIPSMITH_BACKEND_URL in config.js is set correctly.');
+      clicked.textContent = originalText;
+      clicked.style.pointerEvents = '';
+    }
+  }
+</script>
+
+</body>
+</html>
