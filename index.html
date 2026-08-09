@@ -274,6 +274,29 @@
     font-size:13.5px !important;
   }
   .editor-instruction-input:focus{border-style:solid !important;}
+  .voiceover-toggle-row{
+    flex-basis:100%;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  }
+  .vo-check{
+    display:flex;align-items:center;gap:8px;font-size:13px;color:var(--iron);cursor:pointer;flex:1;min-width:220px;
+  }
+  .vo-check input{width:auto !important;flex:none !important;min-width:0 !important;accent-color:var(--ember);}
+  .voiceover-toggle-row select{
+    background:var(--void);border:1px solid var(--line-strong);color:var(--paper);
+    padding:9px 12px;border-radius:4px;font-size:13px;font-family:var(--font-body);cursor:pointer;
+  }
+  .reclip-btn{
+    background:none;border:1px solid var(--line-strong);color:var(--iron);
+    padding:9px 12px;border-radius:4px;font-size:12px;font-weight:600;
+    width:100%;max-width:250px;margin-top:10px;transition:border-color .2s,color .2s;
+  }
+  .reclip-btn:hover{border-color:var(--ember);color:var(--paper);}
+  .reclip-btn:disabled{opacity:0.5;cursor:default;}
+  .vo-script-box{
+    width:100%;background:var(--void);border:1px solid var(--line-strong);color:var(--paper);
+    padding:12px;border-radius:4px;font-size:13.5px;font-family:var(--font-body);resize:vertical;
+  }
+  .vo-script-box:focus{outline:none;border-color:var(--ember);}
   .editor-status{
     font-family:var(--font-mono);font-size:12.5px;color:var(--ember-glow);margin-top:12px;
     display:none;align-items:center;gap:8px;
@@ -731,6 +754,20 @@
           <button type="submit" class="btn btn-primary" id="generateBtn">Generate clip</button>
           <input type="text" id="editorInstruction" class="editor-instruction-input"
                  placeholder="Tell the AI what to look for (optional) — e.g. &quot;find the funniest moment&quot; or &quot;focus on the part about pricing&quot;">
+          <div class="voiceover-toggle-row">
+            <label class="vo-check">
+              <input type="checkbox" id="voiceoverToggle">
+              AI voice-over (auto-added to silent/music clips, or force it here)
+            </label>
+            <select id="voiceoverVoiceSelect" title="Voice-over voice">
+              <option value="Rachel" selected>Rachel</option>
+              <option value="Adam">Adam</option>
+              <option value="Bella">Bella</option>
+              <option value="Antoni">Antoni</option>
+              <option value="Elli">Elli</option>
+              <option value="Josh">Josh</option>
+            </select>
+          </div>
         </form>
         <div class="editor-status" id="editorStatus"><span class="spin"></span><span id="editorStatusText">Transcribing audio…</span></div>
         <div class="editor-status" id="paywallNotice" style="color:var(--ember-glow);"><span id="paywallText"></span> <a href="#pricing" onclick="closeEditorPaywall()" style="color:var(--ember);font-weight:700;margin-left:6px;">Upgrade →</a></div>
@@ -749,18 +786,37 @@
             <span class="time" id="timeTotal">0:12</span>
           </div>
           <div id="clipSwitcher" style="display:none;flex-wrap:wrap;gap:8px;margin-top:14px;width:100%;max-width:250px;"></div>
+          <button type="button" class="reclip-btn" id="reclipBtn" style="display:none;">↻ Try a different moment</button>
         </div>
 
         <div class="editor-tools">
-          <div class="real-badge" id="modeBadge" style="display:none;">Real clip — your GPU</div>
+          <div class="real-badge" id="modeBadge" style="display:none;">Real AI clip</div>
           <div class="editor-tabs">
             <button class="editor-tab-btn active" data-tab="captions">Captions</button>
             <button class="editor-tab-btn" data-tab="style">Style</button>
             <button class="editor-tab-btn" data-tab="music">Music</button>
+            <button class="editor-tab-btn" data-tab="voiceover" id="voiceoverTabBtn" style="display:none;">Voice-over</button>
             <button class="editor-tab-btn" data-tab="export">Export</button>
           </div>
 
           <div class="editor-panel active" data-panel="captions" id="captionList"></div>
+
+          <div class="editor-panel" data-panel="voiceover">
+            <div style="font-size:12.5px;color:var(--iron);margin-bottom:10px;">AI-narrated script for this clip — edit the text and regenerate the voice anytime.</div>
+            <textarea id="voiceoverScript" class="vo-script-box" rows="4"></textarea>
+            <div style="display:flex;gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap;">
+              <select id="voiceoverRegenVoiceSelect" title="Voice" style="background:var(--void);border:1px solid var(--line-strong);color:var(--paper);padding:10px 12px;border-radius:4px;font-size:13px;">
+                <option value="Rachel">Rachel</option>
+                <option value="Adam">Adam</option>
+                <option value="Bella">Bella</option>
+                <option value="Antoni">Antoni</option>
+                <option value="Elli">Elli</option>
+                <option value="Josh">Josh</option>
+              </select>
+              <button type="button" class="btn btn-primary" id="regenVoiceoverBtn" style="flex:1;min-width:140px;">Regenerate voice</button>
+            </div>
+            <div class="editor-status" id="voiceoverStatus" style="margin-top:10px;"><span class="spin"></span><span id="voiceoverStatusText">Synthesizing…</span></div>
+          </div>
 
           <div class="editor-panel" data-panel="style">
             <div class="style-swatches">
@@ -1313,7 +1369,14 @@
     const realClipVideo = document.getElementById('realClipVideo');
     const clipSwitcher = document.getElementById('clipSwitcher');
     const modeBadge = document.getElementById('modeBadge');
+    const reclipBtn = document.getElementById('reclipBtn');
+    const voiceoverTabBtn = document.getElementById('voiceoverTabBtn');
+    const voiceoverScriptEl = document.getElementById('voiceoverScript');
+    const voiceoverStatus = document.getElementById('voiceoverStatus');
+    const voiceoverStatusText = document.getElementById('voiceoverStatusText');
+    const regenVoiceoverBtn = document.getElementById('regenVoiceoverBtn');
     let realClips = [];
+    let currentJobId = null;
 
     function enterDemoMode(){
       currentRealClipIndex = -1;
@@ -1327,11 +1390,12 @@
       exportBtn.textContent = 'Export 1080p, no watermark';
     }
 
-    function showRealClip(index){
+    function showRealClip(index, cacheBust){
       const clip = realClips[index];
       if(!clip) return;
       currentRealClipIndex = index;
-      realClipVideo.src = `${window.CLIPSMITH_AI_PIPELINE_URL}${clip.url}`;
+      const bust = cacheBust ? `?t=${Date.now()}` : '';
+      realClipVideo.src = `${window.CLIPSMITH_AI_PIPELINE_URL}${clip.url}${bust}`;
       realClipVideo.style.display = 'block';
       playBtn.style.display = 'none';
       capOverlay.style.display = 'none';
@@ -1341,13 +1405,25 @@
       exportDone.classList.remove('on');
       exportProgress.classList.remove('on');
       exportBtn.textContent = 'Download clip.mp4';
+
+      // Voice-over tab only makes sense (and only appears) for clips that
+      // actually got AI narration — most real clips have their own speech
+      // and never go through that pipeline at all.
+      if(clip.has_voiceover){
+        voiceoverTabBtn.style.display = '';
+        voiceoverScriptEl.value = clip.voiceover_script || '';
+      } else {
+        voiceoverTabBtn.style.display = 'none';
+        if(voiceoverTabBtn.classList.contains('active')){
+          // was showing voice-over for the previous clip — bounce back to captions
+          document.querySelector('.editor-tab-btn[data-tab="captions"]').click();
+        }
+      }
     }
 
-    function enterRealMode(clips){
-      realClips = clips;
-      modeBadge.style.display = 'inline-block';
+    function refreshClipPills(){
       clipSwitcher.innerHTML = '';
-      clips.forEach((c,i)=>{
+      realClips.forEach((c,i)=>{
         const pill = document.createElement('button');
         pill.className = 'clip-pill';
         pill.textContent = `Clip ${i+1} · ${fmt(c.start)}–${fmt(c.end)}`;
@@ -1355,12 +1431,93 @@
         clipSwitcher.appendChild(pill);
       });
       clipSwitcher.style.display = 'flex';
+    }
+
+    function enterRealMode(clips, jobId){
+      realClips = clips;
+      currentJobId = jobId || null;
+      modeBadge.style.display = 'inline-block';
+      refreshClipPills();
+      reclipBtn.style.display = currentJobId ? 'block' : 'none';
       showRealClip(0);
 
       // captions/style/music tabs don't apply to a finished, already-rendered
       // real clip — point people at the export tab instead.
       captionList.innerHTML = '<div style="color:var(--iron);font-size:13.5px;">Captions are already burned into this real clip. Generate again for a different cut.</div>';
     }
+
+    reclipBtn.addEventListener('click', async ()=>{
+      if(!currentJobId || currentRealClipIndex < 0) return;
+      if(!checkUsageAllowed()) return;
+
+      reclipBtn.disabled = true;
+      reclipBtn.textContent = 'Finding a different moment…';
+      try{
+        const clipSeconds = parseInt(document.getElementById('clipSecondsSelect').value, 10);
+        const instruction = document.getElementById('editorInstruction').value.trim();
+        const voiceover = document.getElementById('voiceoverToggle').checked;
+        const voiceoverVoice = document.getElementById('voiceoverVoiceSelect').value;
+        const excludeStarts = realClips.map(c=>c.start);
+
+        const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/reclip`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(300000),
+          body: JSON.stringify({
+            job_id: currentJobId, clip_seconds: clipSeconds, instruction,
+            exclude_starts: excludeStarts, voiceover, voiceover_voice: voiceoverVoice,
+          }),
+        });
+        if(!res.ok){
+          const err = await res.json().catch(()=>({detail:'Unknown error'}));
+          throw new Error(err.detail || 'Could not generate a different moment');
+        }
+        const newClip = await res.json();
+        realClips[currentRealClipIndex] = newClip;
+        refreshClipPills();
+        showRealClip(currentRealClipIndex, true);
+      }catch(err){
+        paywallText.textContent = `Couldn't get a different moment: ${err.message}`;
+        paywallNotice.classList.add('on');
+      }finally{
+        reclipBtn.disabled = false;
+        reclipBtn.textContent = '↻ Try a different moment';
+      }
+    });
+
+    regenVoiceoverBtn.addEventListener('click', async ()=>{
+      if(!currentJobId || currentRealClipIndex < 0) return;
+      const clip = realClips[currentRealClipIndex];
+      if(!clip) return;
+      const script = voiceoverScriptEl.value.trim();
+      if(!script){ voiceoverScriptEl.focus(); return; }
+
+      regenVoiceoverBtn.disabled = true;
+      voiceoverStatus.classList.add('on');
+      voiceoverStatusText.textContent = 'Synthesizing new voice…';
+      try{
+        const voice = document.getElementById('voiceoverRegenVoiceSelect').value;
+        const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/regenerate-voiceover`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(120000),
+          body: JSON.stringify({ job_id: currentJobId, clip_file: clip.file, script, voice }),
+        });
+        if(!res.ok){
+          const err = await res.json().catch(()=>({detail:'Unknown error'}));
+          throw new Error(err.detail || 'Voice regeneration failed');
+        }
+        const updated = await res.json();
+        realClips[currentRealClipIndex] = { ...clip, ...updated };
+        showRealClip(currentRealClipIndex, true);
+      }catch(err){
+        paywallText.textContent = `Voice-over error: ${err.message}`;
+        paywallNotice.classList.add('on');
+      }finally{
+        regenVoiceoverBtn.disabled = false;
+        voiceoverStatus.classList.remove('on');
+      }
+    });
 
     async function tryRealPipeline(url){
       // Reachability check first. Railway's free tier lets services go
@@ -1386,13 +1543,18 @@
       const clipSeconds = parseInt(document.getElementById('clipSecondsSelect').value, 10);
       const instructionEl = document.getElementById('editorInstruction');
       const instruction = instructionEl ? instructionEl.value.trim() : '';
+      const voiceover = document.getElementById('voiceoverToggle').checked;
+      const voiceoverVoice = document.getElementById('voiceoverVoiceSelect').value;
 
       statusText.textContent = 'Downloading video…';
       const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/process`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(600000), // long-running: download + transcribe + cut can take minutes
-        body: JSON.stringify({ url, clip_count: clipCount, clip_seconds: clipSeconds, instruction })
+        body: JSON.stringify({
+          url, clip_count: clipCount, clip_seconds: clipSeconds, instruction,
+          voiceover, voiceover_voice: voiceoverVoice,
+        })
       });
       statusText.textContent = 'Transcribing and cutting…';
 
@@ -1404,7 +1566,7 @@
         throw new Error(err.detail || 'Pipeline request failed');
       }
       const data = await res.json();
-      return data.clips || [];
+      return data;
     }
 
     // generate flow
@@ -1418,14 +1580,15 @@
       statusText.textContent = 'Contacting AI pipeline…';
 
       try{
-        const clips = url ? await tryRealPipeline(url) : null;
+        const data = url ? await tryRealPipeline(url) : null;
+        const clips = data ? data.clips : null;
 
         if(clips && clips.length){
           status.classList.remove('on');
           genBtn.disabled = false;
           workspace.classList.add('on');
           timelineEl.style.display = 'none'; // real clips are already trimmed/finished
-          enterRealMode(clips);
+          enterRealMode(clips, data.job_id);
           workspace.scrollIntoView({behavior:'smooth', block:'nearest'});
           return;
         }
