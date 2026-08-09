@@ -799,6 +799,12 @@
               <option value="Elli">Elli</option>
               <option value="Josh">Josh</option>
             </select>
+            <select id="voiceoverStyleSelect" title="Voice-over style">
+              <option value="narration" selected>Narration</option>
+              <option value="ugc_ad">UGC Ad</option>
+              <option value="hype">Hype</option>
+              <option value="calm">Calm</option>
+            </select>
           </div>
         </form>
         <div class="editor-status" id="editorStatus"><span class="spin"></span><span id="editorStatusText">Transcribing audio…</span></div>
@@ -867,6 +873,10 @@
                 <input type="checkbox" id="zoomPanToggle">
                 Ken Burns zoom/pan (slow continuous zoom-in on the clip)
               </label>
+              <label class="zoom-toggle-row" style="margin-bottom:0;">
+                <input type="checkbox" id="flashIntroToggle">
+                Flash intro (camera-flash fade-in + shutter click)
+              </label>
             </div>
 
             <div class="effects-section">
@@ -880,17 +890,36 @@
                 <button class="cg-swatch" data-preset="cinematic">Cinematic</button>
               </div>
             </div>
+
+            <div class="effects-section">
+              <div class="effects-label">Sound effects</div>
+              <div class="cg-swatches" id="sfxSwatches">
+                <button class="cg-swatch active" data-sfx="none">None</button>
+                <button class="cg-swatch" data-sfx="ting">Ting</button>
+                <button class="cg-swatch" data-sfx="pop">Pop</button>
+                <button class="cg-swatch" data-sfx="whoosh">Whoosh</button>
+                <button class="cg-swatch" data-sfx="click">Click</button>
+              </div>
+              <div style="display:flex;gap:14px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+                <label style="font-size:12.5px;color:var(--iron);display:flex;align-items:center;gap:6px;">
+                  Play at:
+                  <select id="sfxPositionSelect" style="background:var(--void);border:1px solid var(--line-strong);color:var(--paper);padding:6px 10px;border-radius:4px;font-size:12.5px;">
+                    <option value="end" selected>End</option>
+                    <option value="start">Start</option>
+                  </select>
+                </label>
+              </div>
+              <label class="zoom-toggle-row" style="margin-top:12px;margin-bottom:0;">
+                <input type="checkbox" id="typingSoundToggle">
+                Typing-keyboard sound bed under the whole clip
+              </label>
+            </div>
           </div>
 
           <div class="editor-panel" data-panel="music">
-            <div class="music-row">
-              <span>Background music</span>
-              <button class="switch" id="musicSwitch"></button>
-            </div>
-            <div class="music-row">
-              <span>Auto-duck under speech</span>
-              <button class="switch on" id="duckSwitch"></button>
-            </div>
+            <div style="font-size:12.5px;color:var(--iron);margin-bottom:10px;">Paste a YouTube or YouTube Music link — it'll be mixed in as low-volume background music under the clip's audio.</div>
+            <input type="text" id="bgMusicInput" placeholder="https://music.youtube.com/watch?v=…"
+                   style="width:100%;background:var(--void);border:1px solid var(--line-strong);color:var(--paper);padding:11px 14px;border-radius:4px;font-size:13.5px;font-family:var(--font-body);box-sizing:border-box;">
           </div>
 
           <div class="editor-panel" data-panel="export">
@@ -1317,13 +1346,42 @@
 
     // color grading preset swatches — value read at generate/reclip time
     let activeColorPreset = 'none';
-    document.querySelectorAll('.cg-swatch').forEach(sw=>{
+    document.querySelectorAll('#colorGradeSwatches .cg-swatch').forEach(sw=>{
       sw.addEventListener('click', ()=>{
-        document.querySelectorAll('.cg-swatch').forEach(s=>s.classList.remove('active'));
+        document.querySelectorAll('#colorGradeSwatches .cg-swatch').forEach(s=>s.classList.remove('active'));
         sw.classList.add('active');
         activeColorPreset = sw.dataset.preset;
       });
     });
+
+    // sound-effect swatches — separate group, scoped so clicking one
+    // doesn't also clear the color-grading swatches' active state (both
+    // reuse the .cg-swatch class for shared styling)
+    let activeSfx = 'none';
+    document.querySelectorAll('#sfxSwatches .cg-swatch').forEach(sw=>{
+      sw.addEventListener('click', ()=>{
+        document.querySelectorAll('#sfxSwatches .cg-swatch').forEach(s=>s.classList.remove('active'));
+        sw.classList.add('active');
+        activeSfx = sw.dataset.sfx;
+      });
+    });
+
+    // Reads every effects/audio control and returns the shared option set
+    // sent to /process, /process-upload, and /reclip alike — one place to
+    // update instead of three whenever a new option is added.
+    function collectClipOptions(){
+      return {
+        caption_style: activeStyle.replace('style-', ''),
+        zoom_pan: document.getElementById('zoomPanToggle').checked,
+        flash_intro: document.getElementById('flashIntroToggle').checked,
+        color_preset: activeColorPreset,
+        sfx: activeSfx,
+        sfx_position: document.getElementById('sfxPositionSelect').value,
+        typing_sound: document.getElementById('typingSoundToggle').checked,
+        bg_music_url: document.getElementById('bgMusicInput').value.trim(),
+        voiceover_style: document.getElementById('voiceoverStyleSelect').value,
+      };
+    }
 
     // switches
     document.querySelectorAll('.switch').forEach(sw=>{
@@ -1551,7 +1609,6 @@
         const voiceover = document.getElementById('voiceoverToggle').checked;
         const voiceoverVoice = document.getElementById('voiceoverVoiceSelect').value;
         const excludeStarts = realClips.map(c=>c.start);
-        const zoomPan = zoomPanToggle.checked;
 
         const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/reclip`, {
           method: 'POST',
@@ -1560,7 +1617,7 @@
           body: JSON.stringify({
             job_id: currentJobId, clip_seconds: clipSeconds, instruction,
             exclude_starts: excludeStarts, voiceover, voiceover_voice: voiceoverVoice,
-            zoom_pan: zoomPan, color_preset: activeColorPreset,
+            ...collectClipOptions(),
           }),
         });
         if(!res.ok){
@@ -1640,7 +1697,6 @@
       const instruction = instructionEl ? instructionEl.value.trim() : '';
       const voiceover = document.getElementById('voiceoverToggle').checked;
       const voiceoverVoice = document.getElementById('voiceoverVoiceSelect').value;
-      const zoomPan = zoomPanToggle.checked;
 
       statusText.textContent = 'Downloading video…';
       const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/process`, {
@@ -1650,7 +1706,7 @@
         body: JSON.stringify({
           url, clip_count: clipCount, clip_seconds: clipSeconds, instruction,
           voiceover, voiceover_voice: voiceoverVoice,
-          zoom_pan: zoomPan, color_preset: activeColorPreset,
+          ...collectClipOptions(),
         })
       });
       statusText.textContent = 'Transcribing and cutting…';
@@ -1690,7 +1746,6 @@
       const instruction = instructionEl ? instructionEl.value.trim() : '';
       const voiceover = document.getElementById('voiceoverToggle').checked;
       const voiceoverVoice = document.getElementById('voiceoverVoiceSelect').value;
-      const zoomPan = zoomPanToggle.checked;
 
       const formData = new FormData();
       formData.append('file', file);
@@ -1699,8 +1754,7 @@
       formData.append('instruction', instruction);
       formData.append('voiceover', voiceover);
       formData.append('voiceover_voice', voiceoverVoice);
-      formData.append('zoom_pan', zoomPan);
-      formData.append('color_preset', activeColorPreset);
+      Object.entries(collectClipOptions()).forEach(([k, v]) => formData.append(k, v));
 
       statusText.textContent = 'Uploading video…';
       const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/process-upload`, {
