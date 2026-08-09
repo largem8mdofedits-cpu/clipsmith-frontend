@@ -632,7 +632,7 @@
       </div>
       <div class="modal-error" id="signupError"></div>
       <button type="submit" class="btn btn-primary btn-block">Create account</button>
-      <div class="modal-note">Includes 1 free clip generation (up to 10MB), no card needed.</div>
+      <div class="modal-note">Includes 10 free clip generations from uploaded video, no card needed. YouTube-link clipping requires a plan.</div>
     </form>
   </div>
 </div>
@@ -656,7 +656,7 @@
         <a href="#pricing" class="btn btn-primary">Try it free →</a>
         <a href="#how" class="btn btn-ghost">See how it works</a>
       </div>
-      <div class="hero-note">✦ <b>1 free clip generation</b> · no card required · full 1080p, zero watermark</div>
+      <div class="hero-note">✦ <b>10 free clips from uploaded video</b> · no card required · full 1080p, zero watermark</div>
     </div>
     <div class="clip-window reveal">
       <div class="titlebar">
@@ -711,10 +711,10 @@
     <div class="trial-banner reveal">
       <div>
         <div class="eyebrow">FREE TO TRY</div>
-        <h3>One clip, on us — no card required.</h3>
-        <p>Full access from the moment you sign up — every caption style, voiceover language, and export size, at full 1080p with no watermark. One clip generation, up to 10MB, so you can see the quality before you subscribe.</p>
+        <h3>Ten clips, on us — no card required.</h3>
+        <p>Full access from the moment you sign up — every caption style, voiceover language, and export size, at full 1080p with no watermark. Upload your own video and generate 10 clips free. Pasting a YouTube link needs a plan, since that pulls bandwidth through our paid proxy.</p>
       </div>
-      <div class="trial-timer">1<span>free clip generation</span></div>
+      <div class="trial-timer">10<span>free clips from uploads</span></div>
     </div>
   </div>
 </section>
@@ -764,6 +764,7 @@
         <div class="eyebrow" style="margin-bottom:16px;">Live preview — sample clip</div>
         <form id="editorForm">
           <input type="text" id="editorInput" placeholder="Paste a YouTube, Twitch, or podcast link…">
+          <span id="urlPaidBadge" style="display:none;font-family:var(--font-mono);font-size:11px;letter-spacing:0.04em;text-transform:uppercase;color:var(--ember-glow);background:rgba(255,90,31,0.12);border:1px solid rgba(255,90,31,0.3);border-radius:20px;padding:4px 10px;white-space:nowrap;">Paid plans only — uploads are free</span>
           <button type="button" class="upload-btn" id="uploadTriggerBtn">⤒ Upload your own video</button>
           <input type="file" id="editorFileInput" accept="video/*" style="display:none;">
           <div class="upload-filename" id="uploadFilename">
@@ -958,7 +959,7 @@
     <div class="section-head reveal">
       <div class="eyebrow">Plans</div>
       <h2>Start free. Upgrade when you outgrow it.</h2>
-      <p>Try 1 clip free. After that, pick the tier that matches how much source video you clip each month.</p>
+      <p>Upload your own video and try 10 clips free. Pasting a YouTube link needs a plan — pick the tier that matches how much source video you clip each month.</p>
     </div>
 
     <div class="billing-toggle reveal">
@@ -1069,8 +1070,8 @@
     </div>
     <div class="faq reveal">
       <details open>
-        <summary>What happens after my free try runs out?</summary>
-        <p>You'll be prompted to pick a plan before any further renders start — nothing renders or charges automatically. The free trial is a one-time signup bonus (1 clip, up to 10MB), not a recurring allowance, so subscribing is what keeps you rendering after it's used.</p>
+        <summary>What happens after my free uploads run out?</summary>
+        <p>You'll be prompted to pick a plan before any further renders start — nothing renders or charges automatically. The free trial is a one-time signup bonus (10 clips from your own uploaded video), not a recurring allowance, so subscribing is what keeps you rendering after it's used. Pasting a YouTube link always requires a plan, even before your free uploads run out — uploads don't touch our proxy, YouTube links do.</p>
       </details>
       <details>
         <summary>Do exports have a watermark?</summary>
@@ -1093,7 +1094,7 @@
   <div class="wrap">
     <div class="reveal">
       <h2>Your next clip starts here.</h2>
-      <p>One free clip, no card, full quality. See what ViralCut cuts for you.</p>
+      <p>Ten free clips from your own uploads, no card, full quality. See what ViralCut cuts for you.</p>
       <a href="#pricing" class="btn btn-primary">Try it free →</a>
     </div>
   </div>
@@ -1434,42 +1435,55 @@
 
     // Returns true if the action is allowed to proceed. Otherwise shows the
     // right prompt (sign in, or upgrade) and returns false.
-    function checkUsageAllowed(){
+    // source: 'upload' | 'youtube' — YouTube-link clipping pulls bandwidth
+    // through the paid proxy, so it's paid-plans-only with zero free
+    // access. Uploads never touch the proxy, so free users get a limited
+    // number of free upload tries instead.
+    function checkUsageAllowed(source){
       paywallNotice.classList.remove('on');
       if(!currentUser){
         openAuthModal('signup');
         return false;
       }
-      if(currentUser.plan === 'free' && ((currentUser.freeTriesRemaining || 0) <= 0 || (currentUser.freeMbRemaining || 0) <= 0)){
-        paywallText.textContent = "Your free trial is used up — subscribe to keep rendering.";
+      if(source === 'youtube' && currentUser.plan === 'free'){
+        paywallText.textContent = "Pasting a YouTube link requires a paid plan — try uploading a file instead (free), or subscribe to unlock links.";
+        paywallNotice.classList.add('on');
+        return false;
+      }
+      if(currentUser.plan === 'free' && (currentUser.freeUploadTriesRemaining || 0) <= 0){
+        paywallText.textContent = "Your free uploads are used up — subscribe to keep rendering.";
         paywallNotice.classList.add('on');
         return false;
       }
       return true;
     }
 
-    // Reports actual usage against the free-tier bonus (2 tries / 10MB,
-    // one-time at signup — see server.js). Call this once per completed
-    // render (not per download-click) so re-downloading the same clip
-    // doesn't cost a second "try". Returns true if usage was recorded
-    // (or the user isn't on the free plan), false if the free tier just
-    // ran out — in which case the paywall is already shown.
-    async function consumeUsageForClips(clips){
+    // Reports actual usage after a completed render and enforces plan
+    // limits server-side (see /api/consume-usage in server.js — this is
+    // the same rule checkUsageAllowed applies client-side, just re-checked
+    // against live data). Call this once per completed render, not per
+    // download-click, so re-downloading the same clip doesn't cost a
+    // second try. proxyMbUsed should only be nonzero for youtube-sourced
+    // jobs — uploads never touch the proxy. Returns true if usage was
+    // recorded (or the user isn't on the free plan), false if blocked —
+    // in which case the paywall is already shown.
+    async function consumeUsageForClips(source, proxyMbUsed){
       if(!currentUser) return true;
-      const totalMb = (clips || []).reduce((sum, c) => sum + ((c.size_bytes || 0) / (1024*1024)), 0);
       try{
         const res = await fetch(`${BACKEND_URL}/api/consume-usage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
-          body: JSON.stringify({ mbUsed: totalMb })
+          body: JSON.stringify({ source, proxyMbUsed: proxyMbUsed || 0 })
         });
         if(res.status === 402){
-          paywallText.textContent = "Your free trial is used up — subscribe to keep rendering.";
+          const data = await res.json().catch(()=>({}));
+          paywallText.textContent = data.error || "Subscribe to keep rendering.";
           paywallNotice.classList.add('on');
           return false;
         }
         if(res.ok){
           currentUser = await res.json();
+          if(typeof updateUrlPaidBadge === 'function') updateUrlPaidBadge();
         }
       }catch(err){ /* backend unreachable — don't block the render on a metering hiccup */ }
       return true;
@@ -1481,9 +1495,16 @@
     const exportFill = document.getElementById('exportFill');
     const exportDone = document.getElementById('exportDone');
     let currentRealClipIndex = -1;
+    // Tracks whether the current job came from a YouTube link or an
+    // upload, so /reclip (which reuses the same already-downloaded
+    // source — see pipeline.py) knows how to meter itself too.
+    let currentJobSource = 'upload';
 
     exportBtn.addEventListener('click', async ()=>{
-      if(!checkUsageAllowed()) return;
+      // Re-downloading an already-generated real clip doesn't cost anything
+      // new (usage was already recorded when it was generated) — this gate
+      // really only matters for the demo-fallback simulated render below.
+      if(!checkUsageAllowed('upload')) return;
 
       // Real clip already exists on disk from the pipeline — just download it,
       // no need to fake a render.
@@ -1512,31 +1533,18 @@
           clearInterval(t);
           exportBtn.disabled = false;
 
-          // Demo mode never renders a real file, so there's no true byte
-          // size to meter — use a small flat estimate just to keep the
-          // free-tier bonus consistent whether someone hits the real
-          // pipeline or falls back to the demo.
-          const demoEstimateMb = 2;
-          try{
-            const res = await fetch(`${BACKEND_URL}/api/consume-usage`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', ...authHeaders() },
-              body: JSON.stringify({ mbUsed: demoEstimateMb })
-            });
-            if(res.status === 402){
-              exportDone.textContent = '✗ Free trial used up — subscribe to keep rendering.';
-              exportDone.classList.add('on');
-              paywallText.textContent = "Your free trial is used up — subscribe to keep rendering.";
-              paywallNotice.classList.add('on');
-              return;
-            } else if(res.ok){
-              const updated = await res.json();
-              currentUser = updated;
-              exportDone.textContent = `✓ Ready — clip.mp4 (${updated.freeTriesRemaining ?? 0} free ${(updated.freeTriesRemaining===1)?'try':'tries'} left)`;
-            } else {
-              exportDone.textContent = '✓ Ready — clip.mp4';
-            }
-          }catch(err){
+          // Demo mode never touches the proxy (it's a local fallback
+          // simulation), so it's metered like an upload — 0 proxy MB.
+          const allowed = await consumeUsageForClips('upload', 0);
+          if(!allowed){
+            exportDone.textContent = '✗ Free uploads used up — subscribe to keep rendering.';
+            exportDone.classList.add('on');
+            return;
+          }
+          if(currentUser && currentUser.plan === 'free'){
+            const left = currentUser.freeUploadTriesRemaining ?? 0;
+            exportDone.textContent = `✓ Ready — clip.mp4 (${left} free ${left===1?'try':'tries'} left)`;
+          } else {
             exportDone.textContent = '✓ Ready — clip.mp4';
           }
           exportDone.classList.add('on');
@@ -1628,7 +1636,12 @@
 
     reclipBtn.addEventListener('click', async ()=>{
       if(!currentJobId || currentRealClipIndex < 0) return;
-      if(!checkUsageAllowed()) return;
+      // Reclip reuses the video already downloaded for this job (no new
+      // proxy fetch — see pipeline.py), so it's gated the same way the
+      // original job was: youtube-sourced jobs only ever happen on paid
+      // plans to begin with, so this mainly matters for upload-sourced
+      // jobs re-checking the free-tries balance.
+      if(!checkUsageAllowed(currentJobSource)) return;
 
       reclipBtn.disabled = true;
       reclipBtn.textContent = 'Finding a different moment…';
@@ -1654,7 +1667,10 @@
           throw new Error(err.detail || 'Could not generate a different moment');
         }
         const newClip = await res.json();
-        await consumeUsageForClips([newClip]); // reclip counts as its own try/MB usage
+        // No new proxy fetch happens on reclip (same source video reused),
+        // so proxyMbUsed is always 0 here — it still counts as a try.
+        const allowed = await consumeUsageForClips(currentJobSource, 0);
+        if(!allowed) return;
         realClips[currentRealClipIndex] = newClip;
         refreshClipPills();
         showRealClip(currentRealClipIndex, true);
@@ -1805,9 +1821,14 @@
     // generate flow
     form.addEventListener('submit', async (e)=>{
       e.preventDefault();
-      if(!checkUsageAllowed()) return;
 
       const url = input.value.trim();
+      // A YouTube link pulls bandwidth through the paid proxy — paid
+      // plans only. An upload never touches the proxy — free-eligible.
+      const source = selectedFile ? 'upload' : 'youtube';
+      if(!checkUsageAllowed(source)) return;
+      currentJobSource = source;
+
       genBtn.disabled = true;
       status.classList.add('on');
       statusText.textContent = 'Contacting AI pipeline…';
@@ -1823,7 +1844,12 @@
           genBtn.disabled = false;
           workspace.classList.add('on');
           timelineEl.style.display = 'none'; // real clips are already trimmed/finished
-          await consumeUsageForClips(clips); // meter free-tier usage against the real rendered files
+          // Only a YouTube-sourced job actually pulled bytes through the
+          // proxy — an upload's source_bytes is the user's own file, not
+          // proxy traffic, so it's never reported as proxyMbUsed.
+          const proxyMbUsed = data.is_youtube ? (data.source_bytes || 0) / (1024*1024) : 0;
+          const allowed = await consumeUsageForClips(source, proxyMbUsed);
+          if(!allowed) return;
           enterRealMode(clips, data.job_id);
           workspace.scrollIntoView({behavior:'smooth', block:'nearest'});
           return;
@@ -1890,8 +1916,17 @@
 
   let currentUser = null;
 
+  // Shows the "Paid plans only" badge next to the URL field for anyone
+  // not signed in or still on the free plan — matches what
+  // checkUsageAllowed('youtube') actually enforces, just surfaced before
+  // they hit submit instead of after.
+  function updateUrlPaidBadge(){
+    const badge = document.getElementById('urlPaidBadge');
+    if(badge) badge.style.display = (!currentUser || currentUser.plan === 'free') ? 'inline-block' : 'none';
+  }
+
   async function checkSession(){
-    if(!getToken()) return; // never signed in on this browser — skip the call
+    if(!getToken()){ updateUrlPaidBadge(); return; } // never signed in on this browser — skip the call
     try{
       const res = await fetch(`${BACKEND_URL}/api/me`, { headers: authHeaders() });
       if(res.ok){
@@ -1902,6 +1937,7 @@
         clearToken(); // stale/expired token — stop sending it
       }
     }catch(err){ /* backend not running yet — fine, stays signed out */ }
+    updateUrlPaidBadge();
   }
   checkSession();
 
