@@ -297,6 +297,32 @@
     padding:12px;border-radius:4px;font-size:13.5px;font-family:var(--font-body);resize:vertical;
   }
   .vo-script-box:focus{outline:none;border-color:var(--ember);}
+  .upload-btn{
+    background:var(--void);border:1px solid var(--line-strong);color:var(--iron);
+    padding:13px 16px;border-radius:4px;font-size:13px;font-weight:600;cursor:pointer;
+    transition:border-color .2s,color .2s;white-space:nowrap;
+  }
+  .upload-btn:hover{border-color:var(--ember);color:var(--paper);}
+  .upload-btn.has-file{border-color:var(--ember);color:var(--paper);}
+  .upload-filename{
+    flex-basis:100%;font-size:12.5px;color:var(--iron);display:none;align-items:center;gap:8px;
+  }
+  .upload-filename.on{display:flex;}
+  .upload-filename .clear-upload{
+    background:none;border:0;color:var(--ember);cursor:pointer;font-size:12px;font-weight:700;
+    text-decoration:underline;padding:0;
+  }
+  .effects-section{margin-top:22px;padding-top:20px;border-top:1px solid var(--line);}
+  .effects-section:first-child{margin-top:0;padding-top:0;border-top:0;}
+  .effects-label{font-size:12px;font-weight:700;color:var(--iron);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px;}
+  .cg-swatches{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .cg-swatch{
+    border:1px solid var(--line-strong);border-radius:5px;padding:11px 8px;text-align:center;
+    font-size:11.5px;font-weight:600;color:var(--iron);background:var(--void);
+  }
+  .cg-swatch.active{border-color:var(--ember);color:var(--paper);background:var(--panel-2);}
+  .zoom-toggle-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--iron);cursor:pointer;margin-bottom:16px;}
+  .zoom-toggle-row input{width:auto;accent-color:var(--ember);}
   .editor-status{
     font-family:var(--font-mono);font-size:12.5px;color:var(--ember-glow);margin-top:12px;
     display:none;align-items:center;gap:8px;
@@ -738,6 +764,12 @@
         <div class="eyebrow" style="margin-bottom:16px;">Live preview — sample clip</div>
         <form id="editorForm">
           <input type="text" id="editorInput" placeholder="Paste a YouTube, Twitch, or podcast link…">
+          <button type="button" class="upload-btn" id="uploadTriggerBtn">⤒ Upload your own video</button>
+          <input type="file" id="editorFileInput" accept="video/*" style="display:none;">
+          <div class="upload-filename" id="uploadFilename">
+            <span id="uploadFilenameText"></span>
+            <button type="button" class="clear-upload" id="clearUploadBtn">remove</button>
+          </div>
           <select id="clipCountSelect" title="Number of clips">
             <option value="1">1 clip</option>
             <option value="2" selected>2 clips</option>
@@ -819,11 +851,34 @@
           </div>
 
           <div class="editor-panel" data-panel="style">
-            <div class="style-swatches">
-              <button class="style-swatch active" data-style="style-bold">Bold Pop</button>
-              <button class="style-swatch" data-style="style-karaoke">Karaoke</button>
-              <button class="style-swatch" data-style="style-meme">Meme Stack</button>
-              <button class="style-swatch" data-style="style-minimal">Minimal</button>
+            <div class="effects-section">
+              <div class="effects-label">Caption style</div>
+              <div class="style-swatches">
+                <button class="style-swatch active" data-style="style-bold">Bold Pop</button>
+                <button class="style-swatch" data-style="style-karaoke">Karaoke</button>
+                <button class="style-swatch" data-style="style-meme">Meme Stack</button>
+                <button class="style-swatch" data-style="style-minimal">Minimal</button>
+              </div>
+            </div>
+
+            <div class="effects-section">
+              <div class="effects-label">Motion</div>
+              <label class="zoom-toggle-row">
+                <input type="checkbox" id="zoomPanToggle">
+                Ken Burns zoom/pan (slow continuous zoom-in on the clip)
+              </label>
+            </div>
+
+            <div class="effects-section">
+              <div class="effects-label">Color grading</div>
+              <div class="cg-swatches" id="colorGradeSwatches">
+                <button class="cg-swatch active" data-preset="none">None</button>
+                <button class="cg-swatch" data-preset="warm">Warm</button>
+                <button class="cg-swatch" data-preset="moody">Moody</button>
+                <button class="cg-swatch" data-preset="vibrant">Vibrant</button>
+                <button class="cg-swatch" data-preset="bw">B&amp;W</button>
+                <button class="cg-swatch" data-preset="cinematic">Cinematic</button>
+              </div>
             </div>
           </div>
 
@@ -1114,6 +1169,34 @@
     const statusText = document.getElementById('editorStatusText');
     const workspace = document.getElementById('editorWorkspace');
     const timelineEl = document.getElementById('editorTimeline');
+    const uploadTriggerBtn = document.getElementById('uploadTriggerBtn');
+    const editorFileInput = document.getElementById('editorFileInput');
+    const uploadFilename = document.getElementById('uploadFilename');
+    const uploadFilenameText = document.getElementById('uploadFilenameText');
+    const clearUploadBtn = document.getElementById('clearUploadBtn');
+    const zoomPanToggle = document.getElementById('zoomPanToggle');
+    let selectedFile = null;
+
+    uploadTriggerBtn.addEventListener('click', ()=> editorFileInput.click());
+    editorFileInput.addEventListener('change', ()=>{
+      const f = editorFileInput.files && editorFileInput.files[0];
+      if(!f) return;
+      selectedFile = f;
+      input.value = '';
+      input.placeholder = 'Using uploaded file — clear it to paste a link instead';
+      uploadTriggerBtn.classList.add('has-file');
+      uploadTriggerBtn.textContent = '⤒ Change video';
+      uploadFilenameText.textContent = f.name;
+      uploadFilename.classList.add('on');
+    });
+    clearUploadBtn.addEventListener('click', ()=>{
+      selectedFile = null;
+      editorFileInput.value = '';
+      input.placeholder = 'Paste a YouTube, Twitch, or podcast link…';
+      uploadTriggerBtn.classList.remove('has-file');
+      uploadTriggerBtn.textContent = '⤒ Upload your own video';
+      uploadFilename.classList.remove('on');
+    });
     const capOverlay = document.getElementById('capOverlay');
     const playBtn = document.getElementById('playBtn');
     const miniFill = document.getElementById('miniFill');
@@ -1229,6 +1312,16 @@
         capOverlay.classList.remove(activeStyle);
         activeStyle = sw.dataset.style;
         capOverlay.classList.add(activeStyle);
+      });
+    });
+
+    // color grading preset swatches — value read at generate/reclip time
+    let activeColorPreset = 'none';
+    document.querySelectorAll('.cg-swatch').forEach(sw=>{
+      sw.addEventListener('click', ()=>{
+        document.querySelectorAll('.cg-swatch').forEach(s=>s.classList.remove('active'));
+        sw.classList.add('active');
+        activeColorPreset = sw.dataset.preset;
       });
     });
 
@@ -1458,6 +1551,7 @@
         const voiceover = document.getElementById('voiceoverToggle').checked;
         const voiceoverVoice = document.getElementById('voiceoverVoiceSelect').value;
         const excludeStarts = realClips.map(c=>c.start);
+        const zoomPan = zoomPanToggle.checked;
 
         const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/reclip`, {
           method: 'POST',
@@ -1466,6 +1560,7 @@
           body: JSON.stringify({
             job_id: currentJobId, clip_seconds: clipSeconds, instruction,
             exclude_starts: excludeStarts, voiceover, voiceover_voice: voiceoverVoice,
+            zoom_pan: zoomPan, color_preset: activeColorPreset,
           }),
         });
         if(!res.ok){
@@ -1545,6 +1640,7 @@
       const instruction = instructionEl ? instructionEl.value.trim() : '';
       const voiceover = document.getElementById('voiceoverToggle').checked;
       const voiceoverVoice = document.getElementById('voiceoverVoiceSelect').value;
+      const zoomPan = zoomPanToggle.checked;
 
       statusText.textContent = 'Downloading video…';
       const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/process`, {
@@ -1554,6 +1650,7 @@
         body: JSON.stringify({
           url, clip_count: clipCount, clip_seconds: clipSeconds, instruction,
           voiceover, voiceover_voice: voiceoverVoice,
+          zoom_pan: zoomPan, color_preset: activeColorPreset,
         })
       });
       statusText.textContent = 'Transcribing and cutting…';
@@ -1562,6 +1659,58 @@
         // FastAPI's HTTPException responses come back as {"detail": "..."},
         // not {"error": "..."} — reading the wrong field here would silently
         // swallow every real backend error message.
+        const err = await res.json().catch(()=>({detail:'Unknown error'}));
+        throw new Error(err.detail || 'Pipeline request failed');
+      }
+      const data = await res.json();
+      return data;
+    }
+
+    async function tryRealPipelineUpload(file){
+      // Same reachability check as the URL path — a cold Railway container
+      // needs real time to wake up, not a short timeout that silently
+      // falls back to the demo.
+      statusText.textContent = 'Waking up the AI pipeline…';
+      try{
+        const ping = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/health`, { signal: AbortSignal.timeout(20000) });
+        if(!ping.ok){
+          throw new Error(`AI pipeline health check failed (status ${ping.status}). Try again in a few seconds.`);
+        }
+      }catch(err){
+        console.warn('Clipsmith: pipeline unreachable.', err);
+        if(err.name === 'TimeoutError' || err.name === 'AbortError'){
+          throw new Error('The AI pipeline is taking longer than usual to wake up. Please try again in about 30 seconds.');
+        }
+        throw new Error(err.message || 'Could not reach the AI pipeline.');
+      }
+
+      const clipCount = parseInt(document.getElementById('clipCountSelect').value, 10);
+      const clipSeconds = parseInt(document.getElementById('clipSecondsSelect').value, 10);
+      const instructionEl = document.getElementById('editorInstruction');
+      const instruction = instructionEl ? instructionEl.value.trim() : '';
+      const voiceover = document.getElementById('voiceoverToggle').checked;
+      const voiceoverVoice = document.getElementById('voiceoverVoiceSelect').value;
+      const zoomPan = zoomPanToggle.checked;
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('clip_count', clipCount);
+      formData.append('clip_seconds', clipSeconds);
+      formData.append('instruction', instruction);
+      formData.append('voiceover', voiceover);
+      formData.append('voiceover_voice', voiceoverVoice);
+      formData.append('zoom_pan', zoomPan);
+      formData.append('color_preset', activeColorPreset);
+
+      statusText.textContent = 'Uploading video…';
+      const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/process-upload`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(600000), // upload + transcribe + cut can take minutes
+        body: formData,
+      });
+      statusText.textContent = 'Transcribing and cutting…';
+
+      if(!res.ok){
         const err = await res.json().catch(()=>({detail:'Unknown error'}));
         throw new Error(err.detail || 'Pipeline request failed');
       }
@@ -1580,7 +1729,9 @@
       statusText.textContent = 'Contacting AI pipeline…';
 
       try{
-        const data = url ? await tryRealPipeline(url) : null;
+        const data = selectedFile ? await tryRealPipelineUpload(selectedFile)
+                    : url ? await tryRealPipeline(url)
+                    : null;
         const clips = data ? data.clips : null;
 
         if(clips && clips.length){
