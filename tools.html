@@ -176,7 +176,7 @@
   const TOOLS = [
     { id:'images', title:'AI Images', desc:'Generate an image from a text prompt.', icon:'🖼️', preview:'preview-images', ready:true },
     { id:'voice', title:'AI Voiceovers', desc:'Turn a script into natural speech.', icon:'🎙️', preview:'preview-voice', ready:true },
-    { id:'download', title:'Download Social Videos', desc:'Save a YouTube or TikTok video directly.', icon:'⬇️', preview:'preview-download', ready:false },
+    { id:'download', title:'Download Social Videos', desc:'Save a YouTube or TikTok video directly.', icon:'⬇️', preview:'preview-download', ready:true },
     { id:'bgremove', title:'Background Remover', desc:'Strip the background from an image.', icon:'✂️', preview:'preview-bg', ready:true },
     { id:'ideas', title:'Brainstorm Ideas', desc:'Get short-form content ideas on any topic.', icon:'💡', preview:'preview-ideas', ready:true },
     { id:'enhance', title:'Speech Enhancer', desc:'Clean up noisy voice recordings.', icon:'🔊', preview:'preview-enhance', ready:true },
@@ -223,6 +223,10 @@
   const VOICE_OPTIONS = ['Rachel','Adam','Bella','Antoni','Elli','Josh'];
 
   const PANEL_BUILDERS = {
+    download: () => `
+      <label>Video link</label>
+      <input type="text" id="downloadUrl" placeholder="https://www.youtube.com/watch?v=… or a TikTok link">
+      <button class="btn btn-primary" id="downloadGoBtn">Download video</button>`,
     images: () => `
       <label>Prompt</label>
       <input type="text" id="imagesPrompt" placeholder="A small, adorable cat with bright green eyes…">
@@ -312,6 +316,20 @@
   }
 
   function wireToolActions(id){
+    if(id === 'download'){
+      document.getElementById('downloadGoBtn').addEventListener('click', ()=>{
+        const url = document.getElementById('downloadUrl').value.trim();
+        if(!url) return;
+        const fd = new FormData(); fd.append('url', url);
+        callTool('/download-social-video', fd, (data)=>{
+          const mb = data.size_bytes ? (data.size_bytes / (1024*1024)).toFixed(1) + ' MB' : '';
+          panelResult.innerHTML = `
+            <video controls style="width:100%;border-radius:6px;border:1px solid var(--line);margin-bottom:10px;" src="${PIPELINE_URL}${data.url}"></video>
+            <a class="btn btn-primary" href="${PIPELINE_URL}${data.url}" download>Download ${mb}</a>`;
+          panelResult.classList.add('on');
+        });
+      });
+    }
     if(id === 'images'){
       document.getElementById('imagesGoBtn').addEventListener('click', async ()=>{
         const prompt = document.getElementById('imagesPrompt').value.trim();
