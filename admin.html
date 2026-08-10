@@ -158,7 +158,7 @@
 
     const planGrid = document.getElementById('planGrid');
     planGrid.innerHTML = '';
-    const planLabels = { starter: 'Starter — $19/mo', pro: 'Pro — $49/mo', elite: 'Elite — $129/mo' };
+    const planLabels = { starter: 'Starter — $16/mo', pro: 'Pro — $34/mo', elite: 'Elite — $69/mo' };
     Object.entries(data.byPlan).forEach(([plan, stats]) => {
       const card = document.createElement('div');
       card.className = 'plan-card';
