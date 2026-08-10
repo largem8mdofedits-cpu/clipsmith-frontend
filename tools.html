@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Tools — ViralCut</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23120f0d'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='20' font-weight='700' fill='%23ff5a1f' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
-<meta name="theme-color" content="#120f0d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231e1f22'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='20' font-weight='700' fill='%235865f2' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#1e1f22">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --void:#120f0d; --panel:#1b1613; --panel-2:#221c18;
-    --ember:#ff5a1f; --ember-glow:#ff8a4c; --steel:#7c93b0;
-    --paper:#f3eee6; --iron:#9c948a;
-    --line:rgba(243,238,230,0.12); --line-strong:rgba(243,238,230,0.22);
+    --void:#1e1f22; --panel:#2b2d31; --panel-2:#313338;
+    --ember:#5865f2; --ember-glow:#7983f5; --steel:#6f80d1;
+    --paper:#f2f3f5; --iron:#949ba4;
+    --line:rgba(242,243,245,0.12); --line-strong:rgba(242,243,245,0.22);
     --font-display:'Oswald',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'JetBrains Mono',monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
@@ -29,7 +29,7 @@
   .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border-radius:3px;font-weight:600;font-size:13.5px;border:1px solid var(--line-strong);background:transparent;color:var(--paper);cursor:pointer;font-family:var(--font-body);}
   .btn:hover{border-color:var(--paper);}
   .btn:disabled{opacity:0.5;cursor:not-allowed;}
-  .btn-primary{background:var(--ember);border-color:var(--ember);color:#160c07;}
+  .btn-primary{background:var(--ember);border-color:var(--ember);color:#ffffff;}
 
   main{padding:56px 0 100px;}
   .state{display:none;}
@@ -39,7 +39,7 @@
   .sub{color:var(--iron);margin-bottom:36px;}
 
   .plan-banner{background:var(--panel);border:1px solid var(--line-strong);border-radius:8px;padding:16px 20px;margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
-  .plan-banner.free{border-color:rgba(255,90,31,0.35);}
+  .plan-banner.free{border-color:rgba(88,101,242,0.35);}
   .plan-banner-text{color:var(--iron);font-size:13.5px;}
   .plan-banner-text strong{color:var(--paper);}
 
@@ -58,14 +58,14 @@
   .tool-card-desc{color:var(--iron);font-size:12px;line-height:1.4;}
   .soon-tag{position:absolute;top:8px;right:8px;background:var(--void);border:1px solid var(--line-strong);color:var(--iron);font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:0.05em;padding:3px 8px;border-radius:12px;}
 
-  .preview-images{background:linear-gradient(135deg,#3a2418,#1b1613);}
-  .preview-voice{background:linear-gradient(135deg,#1c2a33,#1b1613);}
-  .preview-download{background:linear-gradient(135deg,#241b33,#1b1613);}
+  .preview-images{background:linear-gradient(135deg,#3a2418,#2b2d31);}
+  .preview-voice{background:linear-gradient(135deg,#1c2a33,#2b2d31);}
+  .preview-download{background:linear-gradient(135deg,#241b33,#2b2d31);}
   .preview-bg{background:repeating-conic-gradient(#2a2420 0% 25%,#211c18 0% 50%) 50%/16px 16px;}
-  .preview-ideas{background:linear-gradient(135deg,#20301f,#1b1613);}
-  .preview-enhance{background:linear-gradient(135deg,#332118,#1b1613);}
-  .preview-vocal{background:linear-gradient(135deg,#33182a,#1b1613);}
-  .preview-video{background:linear-gradient(135deg,#181e33,#1b1613);}
+  .preview-ideas{background:linear-gradient(135deg,#20301f,#2b2d31);}
+  .preview-enhance{background:linear-gradient(135deg,#332118,#2b2d31);}
+  .preview-vocal{background:linear-gradient(135deg,#33182a,#2b2d31);}
+  .preview-video{background:linear-gradient(135deg,#181e33,#2b2d31);}
 
   .tool-panel{display:none;background:var(--panel);border:1px solid var(--line-strong);border-radius:10px;padding:26px;margin-top:24px;}
   .tool-panel.on{display:block;}
@@ -87,7 +87,7 @@
   .tool-result audio{width:100%;margin-bottom:10px;}
   .idea-list{list-style:none;}
   .idea-list li{padding:10px 14px;background:var(--void);border:1px solid var(--line);border-radius:5px;margin-bottom:8px;font-size:13.5px;}
-  .paywall-inline{background:var(--void);border:1px solid rgba(255,90,31,0.35);border-radius:6px;padding:14px 16px;font-size:13.5px;color:var(--iron);margin-top:16px;}
+  .paywall-inline{background:var(--void);border:1px solid rgba(88,101,242,0.35);border-radius:6px;padding:14px 16px;font-size:13.5px;color:var(--iron);margin-top:16px;}
   .paywall-inline a{color:var(--ember-glow);font-weight:600;}
   .close-panel{float:right;background:none;border:none;color:var(--iron);cursor:pointer;font-size:13px;}
 
