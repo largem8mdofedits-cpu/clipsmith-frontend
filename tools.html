@@ -299,7 +299,7 @@
       <label>Script</label>
       <textarea id="videoScript" placeholder="Type what the avatar should say…"></textarea>
       <button class="btn btn-primary" id="videoGoBtn">Generate video</button>
-      <div style="font-size:12px;color:var(--iron);margin-top:10px;">Rendering can take a minute or two. This runs on a small free quota (~5 min of video/month total) — it may stop working if that's used up until it resets.</div>`,
+      <div style="font-size:12px;color:var(--iron);margin-top:10px;" id="videoQuotaNote"></div>`,
   };
 
   function openTool(id){
@@ -312,6 +312,7 @@
     panel.scrollIntoView({ behavior:'smooth', block:'start' });
     wireToolActions(id);
     if(id === 'images') refreshImagesQuotaNote();
+    if(id === 'video') refreshVideosQuotaNote();
   }
 
   // AI Images is metered separately from everything else on this page —
@@ -326,6 +327,20 @@
     const cap = currentUser.imagesDailyCap;
     const used = currentUser.imagesUsedToday || 0;
     note.textContent = cap ? `${Math.max(0, cap - used)} of ${cap} images left today (resets daily).` : '';
+  }
+
+  // Same idea as refreshImagesQuotaNote, but monthly — D-ID's shared free
+  // budget (~5 min of video/month for the whole site) is split into a
+  // small per-user monthly allowance (PLAN_VIDEO_MONTHLY_LIMITS in
+  // server.js) instead of first-come-first-served.
+  function refreshVideosQuotaNote(){
+    const note = document.getElementById('videoQuotaNote');
+    if(!note || !currentUser) return;
+    const cap = currentUser.videosMonthlyCap;
+    const used = currentUser.videosUsedThisMonth || 0;
+    note.textContent = cap
+      ? `${Math.max(0, cap - used)} of ${cap} AI videos left this month (resets monthly). Shared free quota, so it may occasionally be unavailable even under your cap.`
+      : 'AI Videos requires a Pro or Elite plan.';
   }
 
   document.getElementById('closePanelBtn').addEventListener('click', ()=>{
@@ -406,7 +421,7 @@
             if(res.ok) currentUser = await res.json();
           }catch(err){ /* usage tracking is best-effort — don't block on it */ }
           refreshImagesQuotaNote();
-        });
+        }, 'Generating — this queues fairly if others are generating too…');
       });
     }
     if(id === 'voice'){
@@ -475,14 +490,34 @@
       });
     }
     if(id === 'video'){
-      document.getElementById('videoGoBtn').addEventListener('click', ()=>{
+      document.getElementById('videoGoBtn').addEventListener('click', async ()=>{
         const photo = document.getElementById('videoPhoto').files[0];
         const script = document.getElementById('videoScript').value.trim();
         if(!photo || !script) return;
+        resetPanel();
+        if(!requirePaidPlan()) return;
+        // Client-side pre-check against the last numbers we fetched — saves
+        // a wasted D-ID call (and a chunk of the shared monthly quota) when
+        // obviously over the cap. /api/consume-video-generation below is
+        // still the real enforcement, checked fresh against the live count.
+        if(currentUser.videosMonthlyCap && (currentUser.videosUsedThisMonth || 0) >= currentUser.videosMonthlyCap){
+          panelError.textContent = `You've used all ${currentUser.videosMonthlyCap} AI Videos included in your plan this month — resets next month.`;
+          panelError.classList.add('on');
+          return;
+        }
         const fd = new FormData(); fd.append('image', photo); fd.append('script', script);
-        callTool('/generate-avatar-video', fd, (data)=>{
+        await callTool('/generate-avatar-video', fd, async (data)=>{
           panelResult.innerHTML = `<video controls style="width:100%;border-radius:6px;border:1px solid var(--line);" src="${data.video_url}"></video>`;
           panelResult.classList.add('on');
+          // Record usage now that generation actually succeeded — a
+          // moderation rejection or failed render shouldn't cost the quota.
+          try{
+            const res = await fetch(`${BACKEND_URL}/api/consume-video-generation`, {
+              method:'POST', headers:{ 'Authorization': `Bearer ${getToken()}` },
+            });
+            if(res.ok) currentUser = await res.json();
+          }catch(err){ /* usage tracking is best-effort — don't block on it */ }
+          refreshVideosQuotaNote();
         }, 'Rendering — this can take a minute or two…');
       });
     }
