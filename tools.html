@@ -79,14 +79,18 @@
   .tool-card-desc{color:var(--iron);font-size:12px;line-height:1.4;}
   .soon-tag{position:absolute;top:8px;right:8px;background:var(--void);border:1px solid var(--line-strong);color:var(--iron);font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:0.05em;padding:3px 8px;border-radius:12px;}
 
-  .preview-images{background:linear-gradient(135deg,#3a2418,#2b2d31);}
-  .preview-voice{background:linear-gradient(135deg,#1c2a33,#2b2d31);}
-  .preview-download{background:linear-gradient(135deg,#241b33,#2b2d31);}
-  .preview-bg{background:repeating-conic-gradient(#2a2420 0% 25%,#211c18 0% 50%) 50%/16px 16px;}
-  .preview-ideas{background:linear-gradient(135deg,#20301f,#2b2d31);}
-  .preview-enhance{background:linear-gradient(135deg,#332118,#2b2d31);}
-  .preview-vocal{background:linear-gradient(135deg,#33182a,#2b2d31);}
-  .preview-video{background:linear-gradient(135deg,#181e33,#2b2d31);}
+  /* Jewel-tone family tied to the site's Blurple identity instead of the
+     old ember-theme browns — each tool gets a distinct, saturated hue for
+     quick visual scanning, all with enough contrast behind the white-ish
+     icon (drop-shadowed above) to read cleanly on a dark card. */
+  .preview-images{background:linear-gradient(135deg,#4a3aa8,#2b2d31);}
+  .preview-voice{background:linear-gradient(135deg,#0f7a6e,#2b2d31);}
+  .preview-download{background:linear-gradient(135deg,#1e5fd9,#2b2d31);}
+  .preview-bg{background:repeating-conic-gradient(#454952 0% 25%,#292b30 0% 50%) 50%/16px 16px;}
+  .preview-ideas{background:linear-gradient(135deg,#a3781a,#2b2d31);}
+  .preview-enhance{background:linear-gradient(135deg,#3a5aad,#2b2d31);}
+  .preview-vocal{background:linear-gradient(135deg,#a3286b,#2b2d31);}
+  .preview-video{background:linear-gradient(135deg,#3730a3,#2b2d31);}
 
   .tool-panel{display:none;background:var(--panel);border:1px solid var(--line-strong);border-radius:10px;padding:26px;margin-top:24px;}
   .tool-panel.on{display:block;animation:panelIn .35s ease;}
@@ -442,7 +446,7 @@
         if(!f) return;
         const fd = new FormData(); fd.append('file', f);
         callTool('/remove-background', fd, (data)=>{
-          panelResult.innerHTML = `<img src="${PIPELINE_URL}${data.url}" style="background:repeating-conic-gradient(#2a2420 0% 25%,#211c18 0% 50%) 50%/16px 16px;">`;
+          panelResult.innerHTML = `<img src="${PIPELINE_URL}${data.url}" style="background:repeating-conic-gradient(#454952 0% 25%,#292b30 0% 50%) 50%/16px 16px;">`;
           panelResult.classList.add('on');
         });
       });
