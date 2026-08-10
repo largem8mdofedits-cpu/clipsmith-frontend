@@ -5,29 +5,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ViralCut — Forge viral clips with AI</title>
 <meta name="description" content="ViralCut turns podcasts, streams, and long-form video into scroll-stopping shorts — AI auto-clipping, captions, and a built-in campaign marketplace for clippers.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23120f0d'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='20' font-weight='700' fill='%23ff5a1f' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231e1f22'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='20' font-weight='700' fill='%235865f2' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
 <meta property="og:title" content="ViralCut — Forge viral clips with AI">
 <meta property="og:description" content="AI clipping built for people who clip for a living. Auto-cut, caption, and post — try your first clip free.">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="ViralCut — Forge viral clips with AI">
 <meta name="twitter:description" content="AI clipping built for people who clip for a living. Auto-cut, caption, and post — try your first clip free.">
-<meta name="theme-color" content="#120f0d">
+<meta name="theme-color" content="#1e1f22">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --void:#120f0d;
-    --panel:#1b1613;
-    --panel-2:#221c18;
-    --ember:#ff5a1f;
-    --ember-glow:#ff8a4c;
-    --steel:#7c93b0;
-    --paper:#f3eee6;
-    --iron:#9c948a;
-    --line:rgba(243,238,230,0.12);
-    --line-strong:rgba(243,238,230,0.22);
+    --void:#1e1f22;
+    --panel:#2b2d31;
+    --panel-2:#313338;
+    --ember:#5865f2;
+    --ember-glow:#7983f5;
+    --steel:#6f80d1;
+    --paper:#f2f3f5;
+    --iron:#949ba4;
+    --line:rgba(242,243,245,0.12);
+    --line-strong:rgba(242,243,245,0.22);
     --font-display:'Oswald',sans-serif;
     --font-body:'Inter',sans-serif;
     --font-mono:'JetBrains Mono',monospace;
@@ -47,6 +47,14 @@
   a{color:inherit;text-decoration:none;}
   ul{list-style:none;}
   button{font-family:inherit;cursor:pointer;}
+
+  /* subtle film-grain overlay — sits above everything, ignores clicks.
+     Gives the dark theme a less "flat CSS" and more premium/editorial feel. */
+  body::after{
+    content:'';position:fixed;inset:0;z-index:200;pointer-events:none;
+    opacity:0.035;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
 
   .wrap{max-width:1180px;margin:0 auto;padding:0 32px;}
   @media(max-width:640px){.wrap{padding:0 20px;}}
@@ -104,8 +112,13 @@
   }
   .logo .dot{color:var(--ember);}
   .nav-links{display:flex;gap:36px;font-size:14px;font-weight:500;color:var(--iron);}
-  .nav-links a{transition:color .2s;}
+  .nav-links a{transition:color .2s;position:relative;padding-bottom:2px;}
+  .nav-links a::after{
+    content:'';position:absolute;left:0;right:100%;bottom:-2px;height:1px;
+    background:var(--ember);transition:right .22s ease;
+  }
   .nav-links a:hover{color:var(--paper);}
+  .nav-links a:hover::after{right:0;}
   .nav-cta{display:flex;align-items:center;gap:18px;}
   .nav-signin{font-size:14px;color:var(--iron);transition:color .2s;}
   .nav-signin:hover{color:var(--paper);}
@@ -117,20 +130,42 @@
     border:1px solid transparent;transition:transform .18s ease, box-shadow .18s ease, background .18s ease;
     white-space:nowrap;
   }
-  .btn-primary{background:var(--ember);color:#160c07;}
-  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px -6px rgba(255,90,31,0.55);}
-  .btn-ghost{border-color:var(--line-strong);color:var(--paper);background:transparent;}
-  .btn-ghost:hover{border-color:var(--paper);}
+  .btn-primary{background:var(--ember);color:#ffffff;position:relative;overflow:hidden;}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px -6px rgba(88,101,242,0.55);}
+  .btn-primary::before{
+    content:'';position:absolute;top:0;bottom:0;left:-60%;width:40%;
+    background:linear-gradient(115deg,transparent,rgba(255,255,255,0.45),transparent);
+    transform:skewX(-20deg);transition:left .55s ease;
+  }
+  .btn-primary:hover::before{left:130%;}
+  .btn-ghost{border-color:var(--line-strong);color:var(--paper);background:transparent;transition:border-color .2s,transform .18s,background .2s;}
+  .btn-ghost:hover{border-color:var(--paper);transform:translateY(-2px);background:rgba(242,243,245,0.04);}
   .btn-block{width:100%;}
 
   /* ===== Hero ===== */
-  .hero{position:relative;padding:96px 0 64px;}
+  .hero{position:relative;padding:96px 0 64px;overflow:hidden;}
   .hero::before{
     content:'';position:absolute;top:-120px;left:50%;transform:translateX(-50%);
     width:900px;height:520px;max-width:140vw;
-    background:radial-gradient(ellipse at center, rgba(255,90,31,0.16), rgba(255,90,31,0.05) 45%, transparent 72%);
+    background:radial-gradient(ellipse at center, rgba(88,101,242,0.16), rgba(88,101,242,0.05) 45%, transparent 72%);
     pointer-events:none;z-index:0;filter:blur(2px);
   }
+  /* two soft drifting orbs behind the hero content — slow, low-opacity,
+     purely decorative motion so the hero doesn't feel static */
+  .hero .orb{position:absolute;border-radius:50%;pointer-events:none;z-index:0;filter:blur(50px);}
+  .hero .orb-a{
+    width:340px;height:340px;top:-60px;right:-80px;
+    background:radial-gradient(circle,rgba(121,131,245,0.35),transparent 70%);
+    animation:orbDrift1 16s ease-in-out infinite;
+  }
+  .hero .orb-b{
+    width:260px;height:260px;bottom:-40px;left:-60px;
+    background:radial-gradient(circle,rgba(45,212,191,0.22),transparent 70%);
+    animation:orbDrift2 20s ease-in-out infinite;
+  }
+  @keyframes orbDrift1{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-30px,26px) scale(1.08);}}
+  @keyframes orbDrift2{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(24px,-20px) scale(1.1);}}
+  @media(prefers-reduced-motion:reduce){.hero .orb{animation:none;}}
   .hero .wrap{position:relative;z-index:1;}
   .hero-grid{display:grid;grid-template-columns:1.05fr 0.95fr;gap:56px;align-items:center;}
   @media(max-width:900px){.hero-grid{grid-template-columns:1fr;}}
@@ -145,7 +180,10 @@
   .clip-window{
     background:var(--panel);border:1px solid var(--line);border-radius:6px;
     overflow:hidden;box-shadow:0 30px 60px -20px rgba(0,0,0,0.6);
+    animation:heroFloat 6s ease-in-out infinite;
   }
+  @keyframes heroFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+  @media(prefers-reduced-motion:reduce){.clip-window{animation:none;}}
   .clip-window .titlebar{
     display:flex;align-items:center;justify-content:space-between;
     padding:12px 16px;border-bottom:1px solid var(--line);
@@ -164,8 +202,19 @@
   }
   .clip-window .stage .frame::after{
     content:'';position:absolute;inset:0;
-    background:linear-gradient(200deg, rgba(255,90,31,0.28), transparent 55%);
+    background:linear-gradient(200deg, rgba(88,101,242,0.28), transparent 55%);
   }
+  .ai-pick-badge{
+    position:absolute;top:10px;left:10px;z-index:2;
+    display:flex;align-items:center;gap:6px;
+    background:rgba(18,15,13,0.72);backdrop-filter:blur(4px);
+    border:1px solid rgba(121,131,245,0.4);border-radius:20px;
+    padding:5px 10px 5px 8px;font-family:var(--font-mono);font-size:10.5px;
+    color:var(--ember-glow);letter-spacing:0.03em;
+  }
+  .ai-pick-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--ember);box-shadow:0 0 8px var(--ember-glow);animation:pulse-dot 1.8s ease-in-out infinite;}
+  @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(0.75);}}
+  @media(prefers-reduced-motion:reduce){.ai-pick-badge .dot{animation:none;}}
   .clip-window .caption-chip{
     position:absolute;bottom:14%;left:50%;transform:translateX(-50%);
     color:#fff;font-weight:800;font-size:12px;white-space:nowrap;
@@ -180,7 +229,7 @@
   .clip-window .caption-chip span:nth-child(3){animation-delay:0.7s;}
   @keyframes karaoke-demo{
     0%,8%{color:#fff;text-shadow:0 2px 6px rgba(0,0,0,0.8);}
-    18%,60%{color:var(--ember);text-shadow:0 0 14px rgba(255,90,31,0.65);}
+    18%,60%{color:var(--ember);text-shadow:0 0 14px rgba(88,101,242,0.65);}
     85%,100%{color:#fff;text-shadow:0 2px 6px rgba(0,0,0,0.8);}
   }
   @media(prefers-reduced-motion:reduce){.clip-window .caption-chip span{animation:none;color:var(--ember);}}
@@ -192,6 +241,20 @@
   .waveform span:nth-child(odd){background:var(--ember);opacity:0.85;}
   @keyframes bounce{0%,100%{transform:scaleY(0.3)}50%{transform:scaleY(1)}}
   @media(prefers-reduced-motion:reduce){.waveform span{animation:none;}}
+
+  /* ===== Proof strip — honest capability stats, not fake user counts ===== */
+  .proof-strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--panel);}
+  .proof-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);}
+  @media(max-width:760px){.proof-grid{grid-template-columns:repeat(2,1fr);}}
+  .proof-item{
+    background:var(--panel);padding:30px 26px;display:flex;align-items:center;gap:14px;
+  }
+  .proof-item{transition:background .2s;}
+  .proof-item:hover{background:var(--panel-2);}
+  .proof-item .icon{width:26px;height:26px;color:var(--ember);flex-shrink:0;transition:transform .3s ease;}
+  .proof-item:hover .icon{transform:scale(1.15) rotate(-6deg);}
+  .proof-item .num{font-family:var(--font-display);font-size:26px;color:var(--paper);line-height:1;}
+  .proof-item .lbl{font-size:12.5px;color:var(--iron);margin-top:4px;}
 
   /* ===== Section shell ===== */
   section{padding:88px 0;}
@@ -216,7 +279,8 @@
   .feature .tc-mark{font-family:var(--font-mono);font-size:11px;color:var(--iron);}
   .feature h3{font-family:var(--font-body);text-transform:none;font-size:17px;font-weight:700;margin:14px 0 8px;letter-spacing:0;}
   .feature p{color:var(--iron);font-size:14.5px;}
-  .feature .icon{width:34px;height:34px;margin-bottom:10px;color:var(--ember);}
+  .feature .icon{width:34px;height:34px;margin-bottom:10px;color:var(--ember);transition:transform .3s ease;}
+  .feature:hover .icon{transform:scale(1.12) rotate(-4deg);}
 
   /* ===== Free trial banner ===== */
   .trial-banner{
@@ -349,7 +413,7 @@
     font-family:var(--font-display);text-transform:uppercase;font-weight:700;font-size:15px;
     padding:6px 4px;outline:none;cursor:text;
   }
-  .cap-overlay.style-bold{background:var(--paper);color:#120f0d;border-radius:3px;padding:6px 8px;}
+  .cap-overlay.style-bold{background:var(--paper);color:#1e1f22;border-radius:3px;padding:6px 8px;}
   .cap-overlay.style-karaoke{
     color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.7);
     background:linear-gradient(90deg,var(--ember) 0%,var(--ember) var(--k,45%),#fff var(--k,45%),#fff 100%);
@@ -435,12 +499,12 @@
   .trim-mask{position:absolute;top:0;bottom:0;background:rgba(18,15,13,0.72);}
   .trim-mask.left{left:0;}
   .trim-mask.right{right:0;}
-  .trim-selected-range{position:absolute;top:0;bottom:0;border-left:2px solid var(--ember);border-right:2px solid var(--ember);background:rgba(255,90,31,0.08);}
+  .trim-selected-range{position:absolute;top:0;bottom:0;border-left:2px solid var(--ember);border-right:2px solid var(--ember);background:rgba(88,101,242,0.08);}
   .trim-handle{
     position:absolute;top:0;bottom:0;width:14px;background:var(--ember);cursor:ew-resize;
     display:flex;align-items:center;justify-content:center;touch-action:none;
   }
-  .trim-handle::after{content:'';width:2px;height:16px;background:#160c07;border-radius:1px;}
+  .trim-handle::after{content:'';width:2px;height:16px;background:#ffffff;border-radius:1px;}
   /* Multi-track look (cosmetic — still controls one clip's trim, see
      editor-timeline markup): labeled Video/Captions lanes stacked like
      Crayo's timeline, instead of a single unlabeled trim bar. */
@@ -458,7 +522,7 @@
   }
   .clip-pill.active{border-color:var(--ember);color:var(--paper);background:var(--panel-2);}
   .real-badge{
-    display:inline-block;background:var(--ember);color:#160c07;font-family:var(--font-mono);
+    display:inline-block;background:var(--ember);color:#ffffff;font-family:var(--font-mono);
     font-size:10.5px;font-weight:700;text-transform:uppercase;padding:3px 8px;border-radius:3px;
     letter-spacing:0.04em;margin-bottom:10px;
   }
@@ -473,7 +537,7 @@
     border:0;background:transparent;color:var(--iron);padding:9px 18px;border-radius:24px;
     font-size:13.5px;font-weight:600;transition:all .2s;
   }
-  .billing-toggle button.active{background:var(--ember);color:#160c07;}
+  .billing-toggle button.active{background:var(--ember);color:#ffffff;}
   .save-tag{font-family:var(--font-mono);font-size:11px;color:var(--ember-glow);margin-left:2px;}
 
   .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:stretch;}
@@ -484,10 +548,15 @@
     transition:border-color .2s, transform .2s;
   }
   .plan:hover{border-color:var(--line-strong);transform:translateY(-4px);box-shadow:0 20px 40px -20px rgba(0,0,0,0.55);}
-  .plan.featured{border-color:var(--ember);background:var(--panel-2);box-shadow:0 0 0 1px rgba(255,90,31,0.3), 0 24px 48px -20px rgba(255,90,31,0.25);}
-  .plan.featured:hover{box-shadow:0 0 0 1px rgba(255,90,31,0.4), 0 28px 56px -18px rgba(255,90,31,0.35);}
+  .plan.featured{border-color:var(--ember);background:var(--panel-2);animation:featuredGlow 3.2s ease-in-out infinite;}
+  .plan.featured:hover{box-shadow:0 0 0 1px rgba(88,101,242,0.4), 0 28px 56px -18px rgba(88,101,242,0.35);}
+  @keyframes featuredGlow{
+    0%,100%{box-shadow:0 0 0 1px rgba(88,101,242,0.3), 0 24px 48px -20px rgba(88,101,242,0.25);}
+    50%{box-shadow:0 0 0 1px rgba(88,101,242,0.55), 0 24px 56px -16px rgba(88,101,242,0.45);}
+  }
+  @media(prefers-reduced-motion:reduce){.plan.featured{animation:none;box-shadow:0 0 0 1px rgba(88,101,242,0.3), 0 24px 48px -20px rgba(88,101,242,0.25);}}
   .plan .badge{
-    position:absolute;top:-13px;left:28px;background:var(--ember);color:#160c07;
+    position:absolute;top:-13px;left:28px;background:var(--ember);color:#ffffff;
     font-family:var(--font-mono);font-size:11px;letter-spacing:0.05em;
     padding:4px 10px;border-radius:3px;text-transform:uppercase;font-weight:600;
   }
@@ -517,12 +586,20 @@
   /* ===== Testimonials ===== */
   .quotes{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
   @media(max-width:860px){.quotes{grid-template-columns:1fr;}}
-  .quote{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:26px;}
-  .quote .cap{
-    display:inline-block;background:var(--paper);color:#120f0d;font-family:var(--font-display);
-    font-size:11px;text-transform:uppercase;padding:3px 8px;border-radius:2px;margin-bottom:14px;
+  .quote{
+    background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:26px;
+    transition:transform .2s, border-color .2s, box-shadow .2s;
   }
-  .quote p{font-size:15px;color:var(--paper);margin-bottom:16px;}
+  .quote:hover{transform:translateY(-4px);border-color:var(--line-strong);box-shadow:0 18px 36px -18px rgba(0,0,0,0.55);}
+  .quote .stars{display:flex;gap:3px;margin-bottom:14px;}
+  .quote .stars svg{width:14px;height:14px;color:var(--ember);}
+  .quote p{font-size:15px;color:var(--paper);margin-bottom:20px;}
+  .quote-who{display:flex;align-items:center;gap:10px;}
+  .quote-avatar{
+    width:36px;height:36px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-size:13px;color:#ffffff;font-weight:700;
+  }
   .quote .who{font-family:var(--font-mono);font-size:12px;color:var(--iron);}
 
   /* ===== FAQ ===== */
@@ -669,6 +746,8 @@
 
 <!-- HERO -->
 <section class="hero">
+  <div class="orb orb-a"></div>
+  <div class="orb orb-b"></div>
   <div class="wrap hero-grid">
     <div>
       <div class="eyebrow">AI CLIPPING, RE-FORGED</div>
@@ -680,12 +759,14 @@
       </div>
       <div class="hero-note">✦ <b>10 free clips from uploaded video</b> · no card required · full 1080p, zero watermark</div>
     </div>
-    <div class="clip-window reveal">
+    <div class="reveal">
+    <div class="clip-window">
       <div class="titlebar">
         <span>podcast_ep114_raw.mp4</span>
         <div class="dots"><span></span><span></span><span></span></div>
       </div>
       <div class="stage">
+        <div class="ai-pick-badge"><span class="dot"></span>AI Pick · retention-optimized</div>
         <div class="frame">
           <div class="caption-chip"><span>this</span> <span>changed</span> <span>everything</span></div>
         </div>
@@ -699,6 +780,29 @@
         <span style="height:85%"></span><span style="height:33%"></span><span style="height:66%"></span>
         <span style="height:48%"></span><span style="height:77%"></span>
       </div>
+    </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROOF STRIP -->
+<section class="proof-strip" style="padding:0;">
+  <div class="proof-grid">
+    <div class="proof-item reveal">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M7 9h2M11 9h6M7 13h10"/></svg>
+      <div><div class="num" data-count="25" data-suffix="+">0</div><div class="lbl">Caption styles</div></div>
+    </div>
+    <div class="proof-item reveal">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 4 5.5 4 9s-1.5 6.5-4 9c-2.5-2.5-4-5.5-4-9s1.5-6.5 4-9z"/></svg>
+      <div><div class="num" data-count="48" data-suffix="">0</div><div class="lbl">Voiceover languages</div></div>
+    </div>
+    <div class="proof-item reveal">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+      <div><div class="num" data-static="4K/8K">4K/8K</div><div class="lbl">Max export resolution</div></div>
+    </div>
+    <div class="proof-item reveal">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="6" height="11" rx="1"/><rect x="15" y="9" width="7" height="7" rx="1"/><rect x="2" y="9" width="4" height="4" rx="1"/></svg>
+      <div><div class="num" data-count="3" data-suffix="">0</div><div class="lbl">Auto-reframe formats — 9:16 · 1:1 · 16:9</div></div>
     </div>
   </div>
 </section>
@@ -714,15 +818,42 @@
       <p>Every tool a clipper actually reaches for, in one workspace — plus the parts other tools leave out.</p>
     </div>
     <div class="feature-grid">
-      <div class="feature reveal"><div class="tc-mark">00:00:01</div><h3>Auto Clip AI</h3><p>Drop in a 3-hour stream and get the 12 strongest moments back, ranked by predicted retention — not just loudness spikes.</p></div>
-      <div class="feature reveal"><div class="tc-mark">00:00:02</div><h3>Batch queue</h3><p>Upload up to 25 source videos at once and let ViralCut process them overnight. Crayo makes you do this one at a time.</p></div>
-      <div class="feature reveal"><div class="tc-mark">00:00:03</div><h3>25+ caption styles</h3><p>Karaoke, bold-pop, meme-stack, and fully custom presets you can save and re-use across every future clip.</p></div>
-      <div class="feature reveal"><div class="tc-mark">00:00:04</div><h3>AI voiceover, 48 languages</h3><p>Dub or narrate in a voice that matches your channel's tone, with automatic lip-sync alignment.</p></div>
-      <div class="feature reveal"><div class="tc-mark">00:00:05</div><h3>Clean background removal</h3><p>Pull a speaker off a busy backdrop in one click, no green screen required.</p></div>
-      <div class="feature reveal"><div class="tc-mark">00:00:06</div><h3>Campaign marketplace</h3><p>Browse paid clipping campaigns with source footage attached, submit clips, and track your view payouts in one dashboard.</p></div>
-      <div class="feature reveal"><div class="tc-mark">00:00:07</div><h3>One-click reframe</h3><p>Bounce between 9:16, 1:1, and 16:9 with subject tracking that keeps the speaker centred automatically.</p></div>
-      <div class="feature reveal"><div class="tc-mark">00:00:08</div><h3>Direct scheduling</h3><p>Queue finished clips straight to TikTok, Reels, and Shorts with posting times ViralCut recommends per platform.</p></div>
-      <div class="feature reveal"><div class="tc-mark">00:00:09</div><h3>Team workspace</h3><p>Share a project with editors or an agency, leave timestamped comments, and approve cuts before they go out.</p></div>
+      <div class="feature reveal">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><path d="M8.5 7.5L20 18M8.5 16.5L20 6"/></svg>
+        <div class="tc-mark">00:00:01</div><h3>Auto Clip AI</h3><p>Drop in a 3-hour stream and get the 12 strongest moments back, ranked by predicted retention — not just loudness spikes.</p>
+      </div>
+      <div class="feature reveal">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>
+        <div class="tc-mark">00:00:02</div><h3>Batch queue</h3><p>Upload up to 25 source videos at once and let ViralCut process them overnight. Crayo makes you do this one at a time.</p>
+      </div>
+      <div class="feature reveal">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M7 9h2M11 9h6M7 13h10"/></svg>
+        <div class="tc-mark">00:00:03</div><h3>25+ caption styles</h3><p>Karaoke, bold-pop, meme-stack, and fully custom presets you can save and re-use across every future clip.</p>
+      </div>
+      <div class="feature reveal">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M9 22h6"/></svg>
+        <div class="tc-mark">00:00:04</div><h3>AI voiceover, 48 languages</h3><p>Dub or narrate in a voice that matches your channel's tone, with automatic lip-sync alignment.</p>
+      </div>
+      <div class="feature reveal">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/><circle cx="12" cy="10" r="3"/><path d="M7 18c1-3 3-4 5-4s4 1 5 4"/></svg>
+        <div class="tc-mark">00:00:05</div><h3>Clean background removal</h3><p>Pull a speaker off a busy backdrop in one click, no green screen required.</p>
+      </div>
+      <div class="feature reveal">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2 5h5l-3.5 3 1.5 5-5-3-5 3 1.5-5L5 7h5z"/></svg>
+        <div class="tc-mark">00:00:06</div><h3>Campaign marketplace</h3><p>Browse paid clipping campaigns with source footage attached, submit clips, and track your view payouts in one dashboard.</p>
+      </div>
+      <div class="feature reveal">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14M18 22V8a2 2 0 0 0-2-2H2"/></svg>
+        <div class="tc-mark">00:00:07</div><h3>One-click reframe</h3><p>Bounce between 9:16, 1:1, and 16:9 with subject tracking that keeps the speaker centred automatically.</p>
+      </div>
+      <div class="feature reveal">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><circle cx="15.5" cy="15.5" r="2.5"/><path d="M15.5 14.3v1.4l1 .6"/></svg>
+        <div class="tc-mark">00:00:08</div><h3>Direct scheduling</h3><p>Queue finished clips straight to TikTok, Reels, and Shorts with posting times ViralCut recommends per platform.</p>
+      </div>
+      <div class="feature reveal">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="18" cy="9" r="2.3"/><path d="M15.5 14a4.5 4.5 0 0 1 5.5 4.4"/></svg>
+        <div class="tc-mark">00:00:09</div><h3>Team workspace</h3><p>Share a project with editors or an agency, leave timestamped comments, and approve cuts before they go out.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -786,7 +917,7 @@
         <div class="eyebrow" style="margin-bottom:16px;">Live preview — sample clip</div>
         <form id="editorForm">
           <input type="text" id="editorInput" placeholder="Paste a YouTube, Twitch, or podcast link…">
-          <span id="urlPaidBadge" style="display:none;font-family:var(--font-mono);font-size:11px;letter-spacing:0.04em;text-transform:uppercase;color:var(--ember-glow);background:rgba(255,90,31,0.12);border:1px solid rgba(255,90,31,0.3);border-radius:20px;padding:4px 10px;white-space:nowrap;">Paid plans only — uploads are free</span>
+          <span id="urlPaidBadge" style="display:none;font-family:var(--font-mono);font-size:11px;letter-spacing:0.04em;text-transform:uppercase;color:var(--ember-glow);background:rgba(88,101,242,0.12);border:1px solid rgba(88,101,242,0.3);border-radius:20px;padding:4px 10px;white-space:nowrap;">Paid plans only — uploads are free</span>
           <button type="button" class="upload-btn" id="uploadTriggerBtn">⤒ Upload your own video</button>
           <input type="file" id="editorFileInput" accept="video/*" style="display:none;">
           <div class="upload-filename" id="uploadFilename">
@@ -1081,19 +1212,46 @@
     </div>
     <div class="quotes">
       <div class="quote reveal">
-        <span class="cap">clip caption</span>
+        <div class="stars">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.2L10 14.9 4.4 18l1.4-6.2L1 7.5l6.4-.6z"/></svg>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.2L10 14.9 4.4 18l1.4-6.2L1 7.5l6.4-.6z"/></svg>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.2L10 14.9 4.4 18l1.4-6.2L1 7.5l6.4-.6z"/></svg>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.2L10 14.9 4.4 18l1.4-6.2L1 7.5l6.4-.6z"/></svg>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.2L10 14.9 4.4 18l1.4-6.2L1 7.5l6.4-.6z"/></svg>
+        </div>
         <p>"I clip for three different creators and the batch queue alone saves me an evening every week."</p>
-        <div class="who">— Freelance clipper, 400K views/mo</div>
+        <div class="quote-who">
+          <div class="quote-avatar" style="background:linear-gradient(135deg,#7983f5,#5865f2);">MJ</div>
+          <div class="who">Freelance clipper, 400K views/mo</div>
+        </div>
       </div>
       <div class="quote reveal">
-        <span class="cap">clip caption</span>
+        <div class="stars">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.2L10 14.9 4.4 18l1.4-6.2L1 7.5l6.4-.6z"/></svg>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.2L10 14.9 4.4 18l1.4-6.2L1 7.5l6.4-.6z"/></svg>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.2L10 14.9 4.4 18l1.4-6.2L1 7.5l6.4-.6z"/></svg>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.2L10 14.9 4.4 18l1.4-6.2L1 7.5l6.4-.6z"/></svg>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.2L10 14.9 4.4 18l1.4-6.2L1 7.5l6.4-.6z"/></svg>
+        </div>
         <p>"Found my first two paid campaigns inside the marketplace tab. Didn't have to DM a single Discord mod."</p>
-        <div class="who">— New clipper, joined via Starter plan</div>
+        <div class="quote-who">
+          <div class="quote-avatar" style="background:linear-gradient(135deg,#6f80d1,#3a4a8f);">RT</div>
+          <div class="who">New clipper, joined via Starter plan</div>
+        </div>
       </div>
       <div class="quote reveal">
-        <span class="cap">clip caption</span>
+        <div class="stars">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.2L10 14.9 4.4 18l1.4-6.2L1 7.5l6.4-.6z"/></svg>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.2L10 14.9 4.4 18l1.4-6.2L1 7.5l6.4-.6z"/></svg>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.2L10 14.9 4.4 18l1.4-6.2L1 7.5l6.4-.6z"/></svg>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.2L10 14.9 4.4 18l1.4-6.2L1 7.5l6.4-.6z"/></svg>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.2L10 14.9 4.4 18l1.4-6.2L1 7.5l6.4-.6z"/></svg>
+        </div>
         <p>"The background removal is the first one I've used that doesn't leave a halo around hair."</p>
-        <div class="who">— Editor, gaming clip agency</div>
+        <div class="quote-who">
+          <div class="quote-avatar" style="background:linear-gradient(135deg,#2dd4bf,#5865f2);">KL</div>
+          <div class="who">Editor, gaming clip agency</div>
+        </div>
       </div>
     </div>
   </div>
@@ -1194,9 +1352,47 @@
     return t ? { 'Authorization': `Bearer ${t}` } : {};
   }
 
-  // reveal on scroll
+  // reveal on scroll — items that share a grid parent (feature-grid, quotes,
+  // steps, pricing-grid, proof-grid) get a small stagger delay based on
+  // their position, so the grid cascades in instead of popping all at once.
+  const STAGGER_PARENTS = ['feature-grid','quotes','steps','pricing-grid','proof-grid'];
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelectorAll('.reveal').forEach(el=>{
+    const parent = el.parentElement;
+    if(!prefersReducedMotion && parent && STAGGER_PARENTS.some(c=>parent.classList.contains(c))){
+      const idx = Array.prototype.indexOf.call(parent.children, el);
+      el.style.transitionDelay = Math.min(idx,6) * 70 + 'ms';
+    }
+  });
+
+  // count-up animation for the honest capability stats in the proof strip
+  // (caption styles, languages, formats) — not user/usage metrics.
+  function animateCount(el){
+    const target = parseFloat(el.dataset.count);
+    const suffix = el.dataset.suffix || '';
+    if(isNaN(target)) return;
+    if(prefersReducedMotion){ el.textContent = target + suffix; return; }
+    const dur = 900, start = performance.now();
+    function tick(now){
+      const p = Math.min(1, (now-start)/dur);
+      const eased = 1 - Math.pow(1-p, 3);
+      el.textContent = Math.round(target*eased) + suffix;
+      if(p<1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
   const io = new IntersectionObserver((entries)=>{
-    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.classList.add('in');
+        if(e.target.classList.contains('proof-item')){
+          const num = e.target.querySelector('.num[data-count]');
+          if(num) animateCount(num);
+        }
+        io.unobserve(e.target);
+      }
+    });
   }, {threshold:0.15});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
