@@ -790,7 +790,7 @@
           <div class="voiceover-toggle-row">
             <label class="vo-check">
               <input type="checkbox" id="voiceoverToggle">
-              AI voice-over (auto-added to silent/music clips, or force it here)
+              AI voice-over (auto-added to silent/music clips, or force it to re-voice this clip in a new voice)
             </label>
             <select id="voiceoverVoiceSelect" title="Voice-over voice">
               <option value="Rachel" selected>Rachel</option>
@@ -799,12 +799,6 @@
               <option value="Antoni">Antoni</option>
               <option value="Elli">Elli</option>
               <option value="Josh">Josh</option>
-            </select>
-            <select id="voiceoverStyleSelect" title="Voice-over style">
-              <option value="narration" selected>Narration</option>
-              <option value="ugc_ad">UGC Ad</option>
-              <option value="hype">Hype</option>
-              <option value="calm">Calm</option>
             </select>
           </div>
         </form>
@@ -918,9 +912,13 @@
           </div>
 
           <div class="editor-panel" data-panel="music">
-            <div style="font-size:12.5px;color:var(--iron);margin-bottom:10px;">Paste a YouTube or YouTube Music link — it'll be mixed in as low-volume background music under the clip's audio.</div>
-            <input type="text" id="bgMusicInput" placeholder="https://music.youtube.com/watch?v=…"
-                   style="width:100%;background:var(--void);border:1px solid var(--line-strong);color:var(--paper);padding:11px 14px;border-radius:4px;font-size:13.5px;font-family:var(--font-body);box-sizing:border-box;">
+            <div style="font-size:12.5px;color:var(--iron);margin-bottom:10px;">Upload an audio file — it'll be mixed in as low-volume background music under the clip's audio.</div>
+            <button type="button" class="upload-btn" id="musicUploadTriggerBtn">⤒ Upload music</button>
+            <input type="file" id="musicFileInput" accept="audio/*" style="display:none;">
+            <div class="upload-filename" id="musicUploadFilename">
+              <span id="musicUploadFilenameText"></span>
+              <button type="button" class="clear-upload" id="clearMusicBtn">remove</button>
+            </div>
           </div>
 
           <div class="editor-panel" data-panel="export">
@@ -1227,6 +1225,76 @@
       uploadTriggerBtn.textContent = '⤒ Upload your own video';
       uploadFilename.classList.remove('on');
     });
+
+    // Background music — a direct file upload instead of a YouTube-link
+    // paste. Since music is shared across every clip in a job (see
+    // find_bg_music in pipeline.py) it's sent to /upload-music as soon as
+    // it's picked (if a clip has already been generated) rather than
+    // being bundled into the generate request; scheduleRestyle() then
+    // re-renders the clip on screen with the new track mixed in. If no
+    // clip exists yet, the file is staged and uploaded right after the
+    // first generate finishes (see enterRealMode below).
+    const musicUploadTriggerBtn = document.getElementById('musicUploadTriggerBtn');
+    const musicFileInput = document.getElementById('musicFileInput');
+    const musicUploadFilename = document.getElementById('musicUploadFilename');
+    const musicUploadFilenameText = document.getElementById('musicUploadFilenameText');
+    const clearMusicBtn = document.getElementById('clearMusicBtn');
+    let selectedMusicFile = null;
+
+    async function uploadMusicIfNeeded(){
+      if(!selectedMusicFile || !currentJobId) return;
+      const fd = new FormData();
+      fd.append('job_id', currentJobId);
+      fd.append('file', selectedMusicFile);
+      try{
+        const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/upload-music`, {
+          method: 'POST', body: fd, signal: AbortSignal.timeout(60000),
+        });
+        if(!res.ok){
+          const err = await res.json().catch(()=>({detail:'Unknown error'}));
+          throw new Error(err.detail || 'Could not upload music');
+        }
+      }catch(err){
+        console.warn('Clipsmith: background music upload failed.', err);
+        paywallText.textContent = `Couldn't upload that music file: ${err.message}`;
+        paywallNotice.classList.add('on');
+      }
+    }
+
+    musicUploadTriggerBtn.addEventListener('click', ()=> musicFileInput.click());
+    musicFileInput.addEventListener('change', async ()=>{
+      const f = musicFileInput.files && musicFileInput.files[0];
+      if(!f) return;
+      selectedMusicFile = f;
+      musicUploadTriggerBtn.classList.add('has-file');
+      musicUploadTriggerBtn.textContent = '⤒ Change music';
+      musicUploadFilenameText.textContent = f.name;
+      musicUploadFilename.classList.add('on');
+      if(currentJobId){
+        await uploadMusicIfNeeded();
+        scheduleRestyle();
+      }
+    });
+    clearMusicBtn.addEventListener('click', async ()=>{
+      selectedMusicFile = null;
+      musicFileInput.value = '';
+      musicUploadTriggerBtn.classList.remove('has-file');
+      musicUploadTriggerBtn.textContent = '⤒ Upload music';
+      musicUploadFilename.classList.remove('on');
+      if(currentJobId){
+        try{
+          const fd = new FormData();
+          fd.append('job_id', currentJobId);
+          await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/remove-music`, {
+            method: 'POST', body: fd, signal: AbortSignal.timeout(30000),
+          });
+        }catch(err){
+          console.warn('Clipsmith: could not remove background music.', err);
+        }
+        scheduleRestyle();
+      }
+    });
+
     const capOverlay = document.getElementById('capOverlay');
     const playBtn = document.getElementById('playBtn');
     const miniFill = document.getElementById('miniFill');
@@ -1342,16 +1410,19 @@
         capOverlay.classList.remove(activeStyle);
         activeStyle = sw.dataset.style;
         capOverlay.classList.add(activeStyle);
+        scheduleRestyle(); // re-renders the current real clip with the new caption style, if one exists
       });
     });
 
-    // color grading preset swatches — value read at generate/reclip time
+    // color grading preset swatches — value read at generate/reclip time,
+    // and re-applied live to the current real clip via scheduleRestyle()
     let activeColorPreset = 'none';
     document.querySelectorAll('#colorGradeSwatches .cg-swatch').forEach(sw=>{
       sw.addEventListener('click', ()=>{
         document.querySelectorAll('#colorGradeSwatches .cg-swatch').forEach(s=>s.classList.remove('active'));
         sw.classList.add('active');
         activeColorPreset = sw.dataset.preset;
+        scheduleRestyle();
       });
     });
 
@@ -1364,8 +1435,13 @@
         document.querySelectorAll('#sfxSwatches .cg-swatch').forEach(s=>s.classList.remove('active'));
         sw.classList.add('active');
         activeSfx = sw.dataset.sfx;
+        scheduleRestyle();
       });
     });
+    document.getElementById('sfxPositionSelect').addEventListener('change', scheduleRestyle);
+    document.getElementById('zoomPanToggle').addEventListener('change', scheduleRestyle);
+    document.getElementById('flashIntroToggle').addEventListener('change', scheduleRestyle);
+    document.getElementById('typingSoundToggle').addEventListener('change', scheduleRestyle);
 
     // Reads every effects/audio control and returns the shared option set
     // sent to /process, /process-upload, and /reclip alike — one place to
@@ -1379,8 +1455,6 @@
         sfx: activeSfx,
         sfx_position: document.getElementById('sfxPositionSelect').value,
         typing_sound: document.getElementById('typingSoundToggle').checked,
-        bg_music_url: document.getElementById('bgMusicInput').value.trim(),
-        voiceover_style: document.getElementById('voiceoverStyleSelect').value,
       };
     }
 
@@ -1644,6 +1718,13 @@
       // captions/style/music tabs don't apply to a finished, already-rendered
       // real clip — point people at the export tab instead.
       captionList.innerHTML = '<div style="color:var(--iron);font-size:13.5px;">Captions are already burned into this real clip. Generate again for a different cut.</div>';
+
+      // If music was picked before this (the first) generate finished,
+      // there was no job yet to upload it to — send it now and restyle
+      // the clip on screen so it's actually mixed in.
+      if(selectedMusicFile && currentJobId){
+        uploadMusicIfNeeded().then(scheduleRestyle);
+      }
     }
 
     reclipBtn.addEventListener('click', async ()=>{
@@ -1694,6 +1775,64 @@
         reclipBtn.textContent = '↻ Try a different moment';
       }
     });
+
+    // Re-applies the current style/effects/music selections to whichever
+    // real clip is on screen, re-rendering the SAME moment (not a new
+    // one) via /reclip's optional explicit `start` param. Without this,
+    // clicking a caption-style/color-grade/sfx swatch or a motion toggle
+    // after a clip already exists silently did nothing — those controls
+    // only got read at the NEXT full generate/reclip, which for most
+    // people never happened, making the whole style panel feel broken.
+    // Debounced so rapid swatch-clicking coalesces into one render
+    // instead of burning a usage "try" per click.
+    let restyleTimer = null;
+    function scheduleRestyle(){
+      if(!currentJobId || currentRealClipIndex < 0) return; // nothing rendered yet — next generate will pick this up
+      clearTimeout(restyleTimer);
+      restyleTimer = setTimeout(applyRestyle, 700);
+    }
+
+    async function applyRestyle(){
+      if(!currentJobId || currentRealClipIndex < 0) return;
+      if(!checkUsageAllowed(currentJobSource)) return;
+
+      const clip = realClips[currentRealClipIndex];
+      status.classList.add('on');
+      statusText.textContent = 'Applying style…';
+      try{
+        const clipSeconds = parseInt(document.getElementById('clipSecondsSelect').value, 10);
+        const voiceover = document.getElementById('voiceoverToggle').checked;
+        const voiceoverVoice = document.getElementById('voiceoverVoiceSelect').value;
+
+        const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/reclip`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(300000),
+          body: JSON.stringify({
+            job_id: currentJobId, start: clip.start, clip_seconds: clipSeconds,
+            voiceover, voiceover_voice: voiceoverVoice,
+            ...collectClipOptions(),
+          }),
+        });
+        if(!res.ok){
+          const err = await res.json().catch(()=>({detail:'Unknown error'}));
+          throw new Error(err.detail || 'Could not update the clip');
+        }
+        const newClip = await res.json();
+        // Same moment, same source — no new proxy fetch, so 0 proxy MB,
+        // but it still counts as a usage try like any other render.
+        const allowed = await consumeUsageForClips(currentJobSource, 0);
+        if(!allowed) return;
+        realClips[currentRealClipIndex] = newClip;
+        refreshClipPills();
+        showRealClip(currentRealClipIndex, true);
+      }catch(err){
+        paywallText.textContent = `Couldn't apply that change: ${err.message}`;
+        paywallNotice.classList.add('on');
+      }finally{
+        status.classList.remove('on');
+      }
+    }
 
     regenVoiceoverBtn.addEventListener('click', async ()=>{
       if(!currentJobId || currentRealClipIndex < 0) return;
