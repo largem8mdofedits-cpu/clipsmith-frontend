@@ -181,7 +181,7 @@
     { id:'ideas', title:'Brainstorm Ideas', desc:'Get short-form content ideas on any topic.', icon:'💡', preview:'preview-ideas', ready:true },
     { id:'enhance', title:'Speech Enhancer', desc:'Clean up noisy voice recordings.', icon:'🔊', preview:'preview-enhance', ready:true },
     { id:'vocal', title:'Vocal Remover', desc:'Split a track into vocals + instrumental.', icon:'🎵', preview:'preview-vocal', ready:true },
-    { id:'video', title:'AI Videos', desc:'Talking AI avatar videos.', icon:'🎬', preview:'preview-video', ready:false },
+    { id:'video', title:'AI Videos', desc:'Talking AI avatar videos.', icon:'🎬', preview:'preview-video', ready:true },
   ];
 
   function renderGrid(){
@@ -260,6 +260,13 @@
       <label>Audio or video file</label>
       <input type="file" id="vocalFile" accept="audio/*,video/*">
       <button class="btn btn-primary" id="vocalGoBtn">Separate vocals</button>`,
+    video: () => `
+      <label>Photo (the face that will talk)</label>
+      <input type="file" id="videoPhoto" accept="image/png,image/jpeg">
+      <label>Script</label>
+      <textarea id="videoScript" placeholder="Type what the avatar should say…"></textarea>
+      <button class="btn btn-primary" id="videoGoBtn">Generate video</button>
+      <div style="font-size:12px;color:var(--iron);margin-top:10px;">Rendering can take a minute or two. This runs on a small free quota (~5 min of video/month total) — it may stop working if that's used up until it resets.</div>`,
   };
 
   function openTool(id){
@@ -292,10 +299,10 @@
     panel.classList.remove('on');
   });
 
-  async function callTool(url, formData, onSuccess){
+  async function callTool(url, formData, onSuccess, statusMessage){
     resetPanel();
     if(!requirePaidPlan()) return;
-    panelStatus.textContent = 'Working…';
+    panelStatus.textContent = statusMessage || 'Working…';
     panelStatus.classList.add('on');
     try{
       const res = await fetch(`${PIPELINE_URL}${url}`, {
@@ -424,6 +431,18 @@
             </div>`;
           panelResult.classList.add('on');
         });
+      });
+    }
+    if(id === 'video'){
+      document.getElementById('videoGoBtn').addEventListener('click', ()=>{
+        const photo = document.getElementById('videoPhoto').files[0];
+        const script = document.getElementById('videoScript').value.trim();
+        if(!photo || !script) return;
+        const fd = new FormData(); fd.append('image', photo); fd.append('script', script);
+        callTool('/generate-avatar-video', fd, (data)=>{
+          panelResult.innerHTML = `<video controls style="width:100%;border-radius:6px;border:1px solid var(--line);" src="${data.video_url}"></video>`;
+          panelResult.classList.add('on');
+        }, 'Rendering — this can take a minute or two…');
       });
     }
   }
