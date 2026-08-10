@@ -108,6 +108,13 @@
       <div class="trial-note" id="usageNote">Minutes of source video processed this month (uploads + YouTube links). Resets on the 1st.</div>
     </div>
 
+    <div class="card" id="proxyUsageCard" style="display:none;margin-bottom:20px;">
+      <h3>Proxy usage this month</h3>
+      <div class="trial-amount" id="proxyUsageAmount" style="font-size:28px;">0 / 0 MB</div>
+      <div class="trial-bar"><div class="fill" id="proxyUsageFill" style="width:0%;"></div></div>
+      <div class="trial-note" id="proxyUsageNote">Bandwidth pulled through the proxy for YouTube-link clips this month. Resets on the 1st.</div>
+    </div>
+
     <div class="card">
       <h3>Get to work</h3>
       <div class="plan-desc">Jump into the clip editor and generate your next caption-ready clip.</div>
@@ -179,6 +186,20 @@
             document.getElementById('usageNote').textContent = "You've used all the source-video minutes included in your plan this month — upgrade for more, or it resets on the 1st.";
           } else {
             document.getElementById('usageNote').textContent = 'Minutes of source video processed this month (uploads + YouTube links). Resets on the 1st.';
+          }
+        }
+
+        const proxyCap = user.proxyMbCap || 0;
+        const proxyUsed = user.proxyMbUsedThisPeriod || 0;
+        const proxyUsageCard = document.getElementById('proxyUsageCard');
+        if(proxyCap){
+          proxyUsageCard.style.display = '';
+          document.getElementById('proxyUsageAmount').textContent = `${proxyUsed} / ${proxyCap} MB`;
+          document.getElementById('proxyUsageFill').style.width = Math.max(0, Math.min(100, proxyUsed / proxyCap * 100)) + '%';
+          if(proxyUsed >= proxyCap){
+            document.getElementById('proxyUsageNote').textContent = "You've used all the proxy bandwidth included in your plan this month — upgrade for more, or it resets on the 1st.";
+          } else {
+            document.getElementById('proxyUsageNote').textContent = 'Bandwidth pulled through the proxy for YouTube-link clips this month. Resets on the 1st.';
           }
         }
       }
