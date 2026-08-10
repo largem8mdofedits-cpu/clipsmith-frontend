@@ -372,15 +372,21 @@
   .mini-bar{flex:1;height:4px;background:var(--line-strong);border-radius:2px;position:relative;overflow:hidden;}
   .mini-bar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--ember);width:0%;}
 
-  .editor-tools{padding:24px 28px;}
-  .editor-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:20px;flex-wrap:wrap;}
+  /* Left icon rail — Crayo-style tool switcher (Media/Subtitles/Text/Audio/
+     Video/Tools reference) instead of the old horizontal text-tab row.
+     Same five tools underneath, just restyled as a vertical icon column. */
+  .editor-tools{padding:24px 28px;display:flex;gap:20px;align-items:flex-start;}
+  .editor-tabs{display:flex;flex-direction:column;gap:6px;flex-shrink:0;width:64px;
+    border-right:1px solid var(--line);padding-right:16px;}
   .editor-tab-btn{
-    background:none;border:0;color:var(--iron);font-size:13.5px;font-weight:600;
-    padding:10px 4px;margin-right:20px;border-bottom:2px solid transparent;
+    background:none;border:1px solid transparent;border-radius:7px;color:var(--iron);
+    font-size:10.5px;font-weight:600;padding:10px 4px;
+    display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;
   }
-  .editor-tab-btn.active{color:var(--paper);border-bottom-color:var(--ember);}
+  .editor-tab-btn .tab-icon{font-size:18px;line-height:1;}
+  .editor-tab-btn.active{color:var(--paper);border-color:var(--ember);background:var(--panel-2);}
   .editor-panel{display:none;}
-  .editor-panel.active{display:block;}
+  .editor-panel.active{display:block;flex:1;min-width:0;}
 
   .cap-row{
     display:flex;gap:12px;align-items:flex-start;padding:10px 10px;border-radius:5px;
@@ -394,12 +400,18 @@
   }
   .cap-row .cap-text:focus{border-bottom-color:var(--line-strong);}
 
-  .style-swatches{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
-  .style-swatch{
-    border:1px solid var(--line-strong);border-radius:5px;padding:14px 10px;text-align:center;
-    font-size:12.5px;font-weight:600;color:var(--iron);background:var(--void);
-  }
-  .style-swatch.active{border-color:var(--ember);color:var(--paper);background:var(--panel-2);}
+  /* Picture-card caption style picker — each card renders a live mini
+     preview of that style (reusing the same .cap-overlay.style-* classes
+     the real caption uses) instead of a plain text button. */
+  .style-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  .style-card{border:1px solid var(--line-strong);border-radius:7px;overflow:hidden;
+    background:var(--void);text-align:left;}
+  .style-card.active{border-color:var(--ember);}
+  .style-card-preview{height:60px;display:flex;align-items:center;justify-content:center;
+    background:#0a0908;position:relative;overflow:hidden;}
+  .style-card-preview .cap-overlay{position:static;font-size:11px;padding:4px 6px;}
+  .style-card-label{padding:8px 10px;font-size:12px;font-weight:600;color:var(--iron);}
+  .style-card.active .style-card-label{color:var(--paper);background:var(--panel-2);}
 
   .music-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line);}
   .music-row:last-child{border-bottom:0;}
@@ -429,7 +441,17 @@
     display:flex;align-items:center;justify-content:center;touch-action:none;
   }
   .trim-handle::after{content:'';width:2px;height:16px;background:#160c07;border-radius:1px;}
-  .cap-ticks{position:relative;height:14px;margin-top:6px;}
+  /* Multi-track look (cosmetic — still controls one clip's trim, see
+     editor-timeline markup): labeled Video/Captions lanes stacked like
+     Crayo's timeline, instead of a single unlabeled trim bar. */
+  .timeline-row{display:flex;align-items:center;gap:10px;margin-top:8px;}
+  .timeline-row:first-of-type{margin-top:0;}
+  .timeline-row-label{width:60px;flex-shrink:0;font-size:10px;font-weight:700;
+    color:var(--iron);text-transform:uppercase;letter-spacing:0.05em;}
+  .cap-ticks{position:relative;height:22px;flex:1;min-width:0;
+    background:var(--void);border:1px solid var(--line-strong);border-radius:5px;}
+  .cap-tick{position:absolute;top:4px;width:5px;height:14px;background:var(--ember);
+    opacity:0.6;border-radius:2px;}
   .clip-pill{
     border:1px solid var(--line-strong);background:var(--void);color:var(--iron);
     padding:6px 10px;border-radius:20px;font-size:11.5px;font-family:var(--font-mono);
@@ -440,7 +462,6 @@
     font-size:10.5px;font-weight:700;text-transform:uppercase;padding:3px 8px;border-radius:3px;
     letter-spacing:0.04em;margin-bottom:10px;
   }
-  .cap-tick{position:absolute;top:0;width:2px;height:8px;background:var(--line-strong);}
   .playhead-mini{position:absolute;top:0;bottom:0;width:2px;background:var(--paper);pointer-events:none;left:0;}
 
   /* ===== Pricing ===== */
@@ -826,11 +847,11 @@
         <div class="editor-tools">
           <div class="real-badge" id="modeBadge" style="display:none;">Real AI clip</div>
           <div class="editor-tabs">
-            <button class="editor-tab-btn active" data-tab="captions">Captions</button>
-            <button class="editor-tab-btn" data-tab="style">Style</button>
-            <button class="editor-tab-btn" data-tab="music">Music</button>
-            <button class="editor-tab-btn" data-tab="voiceover" id="voiceoverTabBtn" style="display:none;">Voice-over</button>
-            <button class="editor-tab-btn" data-tab="export">Export</button>
+            <button class="editor-tab-btn active" data-tab="captions"><span class="tab-icon">💬</span>Captions</button>
+            <button class="editor-tab-btn" data-tab="style"><span class="tab-icon">🎨</span>Style</button>
+            <button class="editor-tab-btn" data-tab="music"><span class="tab-icon">🎵</span>Music</button>
+            <button class="editor-tab-btn" data-tab="voiceover" id="voiceoverTabBtn" style="display:none;"><span class="tab-icon">🎙️</span>Voice-over</button>
+            <button class="editor-tab-btn" data-tab="export"><span class="tab-icon">⤓</span>Export</button>
           </div>
 
           <div class="editor-panel active" data-panel="captions" id="captionList"></div>
@@ -855,11 +876,23 @@
           <div class="editor-panel" data-panel="style">
             <div class="effects-section">
               <div class="effects-label">Caption style</div>
-              <div class="style-swatches">
-                <button class="style-swatch active" data-style="style-bold">Bold Pop</button>
-                <button class="style-swatch" data-style="style-karaoke">Karaoke</button>
-                <button class="style-swatch" data-style="style-meme">Meme Stack</button>
-                <button class="style-swatch" data-style="style-minimal">Minimal</button>
+              <div class="style-cards">
+                <button class="style-card active" data-style="style-bold">
+                  <div class="style-card-preview"><span class="cap-overlay style-bold">SAMPLE</span></div>
+                  <div class="style-card-label">Bold Pop</div>
+                </button>
+                <button class="style-card" data-style="style-karaoke">
+                  <div class="style-card-preview"><span class="cap-overlay style-karaoke">SAMPLE</span></div>
+                  <div class="style-card-label">Karaoke</div>
+                </button>
+                <button class="style-card" data-style="style-meme">
+                  <div class="style-card-preview"><span class="cap-overlay style-meme">SAMPLE</span></div>
+                  <div class="style-card-label">Meme Stack</div>
+                </button>
+                <button class="style-card" data-style="style-minimal">
+                  <div class="style-card-preview"><span class="cap-overlay style-minimal">SAMPLE</span></div>
+                  <div class="style-card-label">Minimal</div>
+                </button>
               </div>
             </div>
 
@@ -934,19 +967,25 @@
 
       <div class="editor-timeline" id="editorTimeline" style="display:none;">
         <div class="label-row">
-          <span>Trim</span>
+          <span>Timeline</span>
           <span id="trimLabel">0:00 – 0:12 selected</span>
         </div>
-        <div class="trim-track" id="trimTrack">
-          <div class="wf" id="trimWaveform"></div>
-          <div class="trim-mask left" id="maskLeft"></div>
-          <div class="trim-mask right" id="maskRight"></div>
-          <div class="trim-selected-range" id="selectedRange"></div>
-          <div class="trim-handle" id="handleLeft" style="left:0%;"></div>
-          <div class="trim-handle" id="handleRight" style="left:calc(100% - 14px);"></div>
-          <div class="playhead-mini" id="playheadMini"></div>
+        <div class="timeline-row">
+          <span class="timeline-row-label">Video</span>
+          <div class="trim-track" id="trimTrack">
+            <div class="wf" id="trimWaveform"></div>
+            <div class="trim-mask left" id="maskLeft"></div>
+            <div class="trim-mask right" id="maskRight"></div>
+            <div class="trim-selected-range" id="selectedRange"></div>
+            <div class="trim-handle" id="handleLeft" style="left:0%;"></div>
+            <div class="trim-handle" id="handleRight" style="left:calc(100% - 14px);"></div>
+            <div class="playhead-mini" id="playheadMini"></div>
+          </div>
         </div>
-        <div class="cap-ticks" id="capTicks"></div>
+        <div class="timeline-row">
+          <span class="timeline-row-label">Captions</span>
+          <div class="cap-ticks" id="capTicks"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1404,9 +1443,9 @@
     });
 
     // style swatches
-    document.querySelectorAll('.style-swatch').forEach(sw=>{
+    document.querySelectorAll('.style-card').forEach(sw=>{
       sw.addEventListener('click', ()=>{
-        document.querySelectorAll('.style-swatch').forEach(s=>s.classList.remove('active'));
+        document.querySelectorAll('.style-card').forEach(s=>s.classList.remove('active'));
         sw.classList.add('active');
         capOverlay.classList.remove(activeStyle);
         activeStyle = sw.dataset.style;
