@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — ViralCut</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231e1f22'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='20' font-weight='700' fill='%235865f2' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1e1f22">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#1e1f22; --panel:#2b2d31; --panel-2:#313338;
+    --ember:#5865f2; --ember-glow:#7983f5; --steel:#6f80d1;
+    --paper:#f2f3f5; --iron:#949ba4;
+    --line:rgba(242,243,245,0.12); --line-strong:rgba(242,243,245,0.22);
+    --green:#5cc98a; --font-display:'Oswald',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--void);color:var(--paper);font-family:var(--font-body);line-height:1.5;-webkit-font-smoothing:antialiased;}
+  a{color:inherit;}
+  h1,h2,h3{font-family:var(--font-display);text-transform:uppercase;font-weight:700;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 32px;}
+  header{border-bottom:1px solid var(--line);padding:22px 0;}
+  .nav{display:flex;align-items:center;justify-content:space-between;}
+  .logo{font-family:var(--font-display);font-weight:700;font-size:19px;text-transform:uppercase;}
+  .logo .dot{color:var(--ember);}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border-radius:3px;font-weight:600;font-size:13.5px;border:1px solid var(--line-strong);background:transparent;color:var(--paper);cursor:pointer;}
+  .btn:hover{border-color:var(--paper);}
+  .btn-primary{background:var(--ember);border-color:var(--ember);color:#ffffff;}
+  main{padding:48px 0;}
+  .state{display:none;} .state.on{display:block;}
+  .gate{max-width:420px;margin:80px auto;text-align:center;}
+  .gate input{width:100%;padding:12px 14px;border-radius:4px;border:1px solid var(--line-strong);background:var(--panel);color:var(--paper);font-family:var(--font-mono);margin:16px 0;}
+  .gate .err{color:#ff7a7a;font-size:13px;margin-top:10px;display:none;}
+  .gate .err.on{display:block;}
+
+  .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px;}
+  @media(max-width:800px){.summary-grid{grid-template-columns:repeat(2,1fr);}}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:20px;}
+  .stat .label{font-family:var(--font-mono);font-size:11px;letter-spacing:0.05em;text-transform:uppercase;color:var(--iron);margin-bottom:8px;}
+  .stat .value{font-family:var(--font-display);font-size:28px;}
+  .stat .value.profit{color:var(--green);}
+
+  .plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px;}
+  @media(max-width:800px){.plan-grid{grid-template-columns:1fr;}}
+  .plan-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px;}
+  .plan-card h4{font-family:var(--font-mono);font-size:12px;letter-spacing:0.05em;text-transform:uppercase;color:var(--ember-glow);margin-bottom:12px;}
+  .plan-card .row{display:flex;justify-content:space-between;font-size:13.5px;padding:4px 0;color:var(--iron);}
+  .plan-card .row b{color:var(--paper);font-weight:600;}
+
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  th,td{text-align:left;padding:12px 16px;font-size:13.5px;border-bottom:1px solid var(--line);}
+  th{font-family:var(--font-mono);font-size:11px;letter-spacing:0.05em;text-transform:uppercase;color:var(--iron);background:var(--panel-2);}
+  tr:last-child td{border-bottom:none;}
+  .plan-pill{display:inline-block;padding:3px 10px;border-radius:12px;font-family:var(--font-mono);font-size:11px;text-transform:uppercase;background:var(--panel-2);border:1px solid var(--line-strong);}
+  .empty{color:var(--iron);text-align:center;padding:40px 0;}
+  .refresh-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+  .updated{color:var(--iron);font-size:12px;font-family:var(--font-mono);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a href="index.html" class="logo">VIRAL<span class="dot">•</span>CUT <span style="font-size:12px;color:var(--iron);">/ admin</span></a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="state on" id="gateState">
+    <div class="gate">
+      <h2>Admin access</h2>
+      <p style="color:var(--iron);font-size:13.5px;margin-top:8px;">Enter the admin key set as ADMIN_KEY in the backend's Railway variables.</p>
+      <input type="password" id="adminKeyInput" placeholder="Admin key" autocomplete="off">
+      <button class="btn btn-primary" id="unlockBtn" style="width:100%;justify-content:center;">Unlock</button>
+      <div class="err" id="gateErr">Not authorized — check the key.</div>
+    </div>
+  </div>
+
+  <div class="state" id="loadingState"><div class="empty">Loading stats…</div></div>
+
+  <div class="state" id="readyState">
+    <div class="refresh-row">
+      <h1 style="font-size:22px;">Live stats</h1>
+      <div>
+        <span class="updated" id="updatedAt"></span>
+        <button class="btn" id="refreshBtn" style="margin-left:12px;">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div class="summary-grid">
+      <div class="stat"><div class="label">Total users</div><div class="value" id="statTotalUsers">—</div></div>
+      <div class="stat"><div class="label">Paid users</div><div class="value" id="statPaidUsers">—</div></div>
+      <div class="stat"><div class="label">Est. monthly revenue</div><div class="value" id="statMrr">—</div></div>
+      <div class="stat"><div class="label">Est. monthly profit</div><div class="value profit" id="statProfit">—</div></div>
+    </div>
+
+    <div class="plan-grid" id="planGrid"></div>
+
+    <h3 style="font-size:15px;margin-bottom:14px;">Paying users</h3>
+    <table>
+      <thead>
+        <tr><th>Email</th><th>Plan</th><th>Joined</th><th>Proxy MB used (all time)</th></tr>
+      </thead>
+      <tbody id="usersTableBody"></tbody>
+    </table>
+    <div class="empty" id="noUsers" style="display:none;">No paying users yet.</div>
+  </div>
+</main>
+
+<script src="config.js"></script>
+<script>
+  const BACKEND_URL = window.CLIPSMITH_BACKEND_URL;
+  const KEY_STORAGE = 'clipsmith_admin_key';
+  const states = ['gateState', 'loadingState', 'readyState'];
+  function showState(id){
+    states.forEach(s => document.getElementById(s).classList.toggle('on', s === id));
+  }
+
+  function fmtMoney(n){
+    return '$' + (n || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+  function fmtDate(iso){
+    try{ return new Date(iso).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }); }
+    catch(e){ return iso; }
+  }
+
+  async function loadStats(key){
+    showState('loadingState');
+    try{
+      const res = await fetch(`${BACKEND_URL}/api/admin/stats`, { headers: { 'X-Admin-Key': key } });
+      if(res.status === 401){
+        localStorage.removeItem(KEY_STORAGE);
+        document.getElementById('gateErr').classList.add('on');
+        showState('gateState');
+        return;
+      }
+      if(!res.ok) throw new Error('Request failed');
+      const data = await res.json();
+      render(data);
+      showState('readyState');
+    }catch(err){
+      document.getElementById('gateErr').textContent = 'Could not reach the backend — is it running?';
+      document.getElementById('gateErr').classList.add('on');
+      showState('gateState');
+    }
+  }
+
+  function render(data){
+    document.getElementById('updatedAt').textContent = 'Updated ' + new Date(data.generatedAt).toLocaleTimeString();
+    document.getElementById('statTotalUsers').textContent = data.totalUsers;
+    document.getElementById('statPaidUsers').textContent = data.paidUserCount;
+    document.getElementById('statMrr').textContent = fmtMoney(data.totals.mrr);
+    document.getElementById('statProfit').textContent = fmtMoney(data.totals.estMonthlyProfit);
+
+    const planGrid = document.getElementById('planGrid');
+    planGrid.innerHTML = '';
+    const planLabels = { starter: 'Starter — $19/mo', pro: 'Pro — $49/mo', elite: 'Elite — $129/mo' };
+    Object.entries(data.byPlan).forEach(([plan, stats]) => {
+      const card = document.createElement('div');
+      card.className = 'plan-card';
+      card.innerHTML = `
+        <h4>${planLabels[plan] || plan}</h4>
+        <div class="row"><span>Subscribers</span><b>${stats.count}</b></div>
+        <div class="row"><span>Revenue</span><b>${fmtMoney(stats.mrr)}/mo</b></div>
+        <div class="row"><span>Est. cost</span><b>${fmtMoney(stats.estMonthlyCost)}/mo</b></div>
+        <div class="row"><span>Est. profit</span><b style="color:var(--green);">${fmtMoney(stats.estMonthlyProfit)}/mo</b></div>
+      `;
+      planGrid.appendChild(card);
+    });
+
+    const tbody = document.getElementById('usersTableBody');
+    tbody.innerHTML = '';
+    document.getElementById('noUsers').style.display = data.paidUsers.length ? 'none' : 'block';
+    data.paidUsers.forEach(u => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${u.email}</td>
+        <td><span class="plan-pill">${u.plan}</span></td>
+        <td>${fmtDate(u.joinedAt)}</td>
+        <td>${u.totalProxyMbUsed.toFixed(1)} MB</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById('unlockBtn').addEventListener('click', () => {
+    const key = document.getElementById('adminKeyInput').value.trim();
+    if(!key) return;
+    document.getElementById('gateErr').classList.remove('on');
+    localStorage.setItem(KEY_STORAGE, key);
+    loadStats(key);
+  });
+  document.getElementById('adminKeyInput').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') document.getElementById('unlockBtn').click();
+  });
+  document.getElementById('refreshBtn').addEventListener('click', () => {
+    const key = localStorage.getItem(KEY_STORAGE);
+    if(key) loadStats(key);
+  });
+
+  // Auto-unlock if we already have a saved key from a previous visit.
+  const savedKey = localStorage.getItem(KEY_STORAGE);
+  if(savedKey) loadStats(savedKey);
+</script>
+
+</body>
+</html>
