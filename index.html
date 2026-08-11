@@ -466,6 +466,43 @@
   @media(prefers-reduced-motion:reduce){.cap-overlay.style-karaoke{animation:none;--k:50%;}}
   .cap-overlay.style-meme{color:#fff;-webkit-text-stroke:1.5px #000;font-size:16px;}
   .cap-overlay.style-minimal{color:var(--paper);font-family:var(--font-body);text-transform:none;font-weight:600;font-size:13px;letter-spacing:0;background:rgba(0,0,0,0.35);border-radius:3px;padding:5px 8px;}
+  .reposition-toggle-btn{
+    position:absolute;top:8px;right:8px;z-index:6;background:rgba(0,0,0,0.55);
+    border:1px solid rgba(255,255,255,0.35);border-radius:5px;color:var(--paper);
+    font-size:10.5px;font-weight:600;padding:5px 8px;cursor:pointer;
+  }
+  .reposition-toggle-btn.on{background:var(--ember);border-color:var(--ember);color:#1e1f22;}
+  .reposition-overlay{
+    position:absolute;inset:0;z-index:5;display:none;cursor:grab;
+    background:rgba(0,0,0,0.2);touch-action:none;
+  }
+  .reposition-overlay.on{display:block;}
+  .reposition-overlay.dragging{cursor:grabbing;}
+  .reposition-grid{
+    position:absolute;inset:0;
+    background-image:linear-gradient(rgba(255,255,255,0.35) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,0.35) 1px,transparent 1px);
+    background-size:33.333% 33.333%;
+    border:2px dashed rgba(255,255,255,0.6);pointer-events:none;
+  }
+  .reposition-hint{
+    position:absolute;top:8px;left:8px;right:64px;font-size:10.5px;color:var(--paper);
+    background:rgba(0,0,0,0.55);border-radius:4px;padding:4px 7px;pointer-events:none;
+  }
+  .reposition-marker{
+    position:absolute;width:14px;height:14px;border-radius:50%;background:var(--ember);
+    border:2px solid var(--paper);left:50%;top:50%;transform:translate(-50%,-50%);
+    pointer-events:none;box-shadow:0 0 0 3px rgba(0,0,0,0.4);
+  }
+  .top-text-words{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+  .top-text-word{
+    border:1px solid var(--line-strong);border-radius:4px;padding:4px 9px;font-size:12.5px;
+    font-weight:600;background:var(--void);cursor:pointer;
+  }
+  .top-text-word[data-color="white"]{color:#fff;}
+  .top-text-word[data-color="red"]{color:#ff4d4d;border-color:#ff4d4d;}
+  .top-text-word[data-color="green"]{color:#4ddd6a;border-color:#4ddd6a;}
+  .top-text-word[data-color="yellow"]{color:#f5e04d;border-color:#f5e04d;}
   .editor-phone .playbtn{
     position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
     width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.3);
@@ -1003,6 +1040,12 @@
             <video id="realClipVideo" controls playsinline style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;"></video>
             <div class="playbtn" id="playBtn">▶</div>
             <div class="cap-overlay style-bold" id="capOverlay" contenteditable="true" spellcheck="false">okay so here's the thing</div>
+            <button type="button" id="repositionToggleBtn" class="reposition-toggle-btn" style="display:none;" title="Drag the video to change what's in frame">⤢ Reposition</button>
+            <div class="reposition-overlay" id="repositionOverlay">
+              <div class="reposition-grid"></div>
+              <div class="reposition-hint">Drag to reposition</div>
+              <div class="reposition-marker" id="repositionMarker"></div>
+            </div>
           </div>
           <div class="editor-preview-controls">
             <span class="time" id="timeNow">0:00</span>
@@ -1081,6 +1124,12 @@
                 <button class="cg-swatch" data-preset="bw">B&amp;W</button>
                 <button class="cg-swatch" data-preset="cinematic">Cinematic</button>
               </div>
+            </div>
+            <div class="effects-section">
+              <div class="effects-label">Top text (optional)</div>
+              <div style="font-size:12.5px;color:var(--iron);margin-bottom:8px;">A pinned title/hook line at the top of the frame, separate from the spoken captions below. Click a word to cycle its color.</div>
+              <input type="text" id="topTextInput" placeholder="e.g. WAIT FOR IT" maxlength="80" style="width:100%;box-sizing:border-box;padding:9px 11px;background:var(--void);border:1px solid var(--line-strong);border-radius:5px;color:var(--paper);font-size:13px;">
+              <div class="top-text-words" id="topTextWords"></div>
             </div>
             <div class="effects-section">
               <div class="effects-label">Sound effects — click one, then click the timeline below to drop it (click it again to stop placing)</div>
@@ -2051,7 +2100,90 @@
       // this same set of call sites a second time.
       gameplayBgToggle.checked = false;
       updateGameplayBgToggleAvailability();
+      // Frame position is also per-clip — a freshly (re)generated clip
+      // always starts centered server-side, so reset the UI to match
+      // rather than silently drifting out of sync with what's rendered.
+      panX = 0.5; panY = 0.5;
+      updateRepositionMarker();
+      repositionOverlay.classList.remove('on');
+      repositionToggleBtn.classList.remove('on');
+      repositionToggleBtn.textContent = '⤢ Reposition';
+      repositionToggleBtn.style.display = hasClip ? 'block' : 'none';
     }
+
+    // ===== Reposition (drag-to-pan the 9:16 crop) =====
+    const repositionToggleBtn = document.getElementById('repositionToggleBtn');
+    const repositionOverlay = document.getElementById('repositionOverlay');
+    const repositionMarker = document.getElementById('repositionMarker');
+    let panX = 0.5, panY = 0.5;
+    function updateRepositionMarker(){
+      repositionMarker.style.left = (panX * 100) + '%';
+      repositionMarker.style.top = (panY * 100) + '%';
+    }
+    repositionToggleBtn.addEventListener('click', ()=>{
+      const on = repositionOverlay.classList.toggle('on');
+      repositionToggleBtn.classList.toggle('on', on);
+      repositionToggleBtn.textContent = on ? '✓ Done' : '⤢ Reposition';
+    });
+    function panFromEvent(e){
+      const rect = repositionOverlay.getBoundingClientRect();
+      const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+      return { x, y };
+    }
+    repositionOverlay.addEventListener('pointerdown', (e)=>{
+      repositionOverlay.setPointerCapture(e.pointerId);
+      repositionOverlay.classList.add('dragging');
+      const p = panFromEvent(e);
+      panX = p.x; panY = p.y;
+      updateRepositionMarker();
+      function onMove(ev){
+        const pm = panFromEvent(ev);
+        panX = pm.x; panY = pm.y;
+        updateRepositionMarker();
+      }
+      function onUp(){
+        repositionOverlay.classList.remove('dragging');
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        scheduleRestyle();
+      }
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+    });
+
+    // ===== Top text (pinned title with per-word color) =====
+    const topTextInput = document.getElementById('topTextInput');
+    const topTextWordsEl = document.getElementById('topTextWords');
+    const TOP_TEXT_COLOR_CYCLE = ['white', 'red', 'green', 'yellow'];
+    let topTextColors = []; // aligned by index to topTextInput.value.split(/\s+/)
+    function renderTopTextWords(){
+      const words = topTextInput.value.trim() ? topTextInput.value.trim().split(/\s+/) : [];
+      // Preserve existing colors where a word is still at the same index;
+      // new words default to white rather than resetting everything.
+      topTextColors = words.map((w, i) => topTextColors[i] || 'white');
+      topTextWordsEl.innerHTML = '';
+      words.forEach((word, i)=>{
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'top-text-word';
+        chip.dataset.color = topTextColors[i];
+        chip.textContent = word;
+        chip.addEventListener('click', ()=>{
+          const idx = TOP_TEXT_COLOR_CYCLE.indexOf(topTextColors[i]);
+          topTextColors[i] = TOP_TEXT_COLOR_CYCLE[(idx + 1) % TOP_TEXT_COLOR_CYCLE.length];
+          chip.dataset.color = topTextColors[i];
+          scheduleRestyle();
+        });
+        topTextWordsEl.appendChild(chip);
+      });
+    }
+    let topTextInputTimer = null;
+    topTextInput.addEventListener('input', ()=>{
+      renderTopTextWords();
+      clearTimeout(topTextInputTimer);
+      topTextInputTimer = setTimeout(scheduleRestyle, 700);
+    });
 
     document.getElementById('zoomPanToggle').addEventListener('change', scheduleRestyle);
     document.getElementById('flashIntroToggle').addEventListener('change', scheduleRestyle);
@@ -2070,6 +2202,10 @@
         // at generate/reclip time. Backend defaults ("none"/"end") cover
         // omitting them here.
         typing_sound: document.getElementById('typingSoundToggle').checked,
+        pan_x: panX,
+        pan_y: panY,
+        top_text: topTextInput.value.trim(),
+        top_text_colors: topTextColors,
       };
     }
     // switches
