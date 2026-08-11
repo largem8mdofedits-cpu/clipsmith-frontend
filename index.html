@@ -953,7 +953,10 @@
         <div class="eyebrow" style="margin-bottom:16px;">Live preview — sample clip</div>
         <form id="editorForm">
           <input type="text" id="editorInput" placeholder="Paste a YouTube, Twitch, or podcast link…">
-          <span id="urlPaidBadge" style="display:none;font-family:var(--font-mono);font-size:11px;letter-spacing:0.04em;text-transform:uppercase;color:var(--ember-glow);background:rgba(88,101,242,0.12);border:1px solid rgba(88,101,242,0.3);border-radius:20px;padding:4px 10px;white-space:nowrap;">Paid plans only — uploads are free</span>
+          <div id="urlPaidBadge" style="display:none;flex-basis:100%;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ember-glow);background:rgba(88,101,242,0.12);border:1px solid rgba(88,101,242,0.35);border-radius:6px;padding:9px 12px;">
+            <span style="font-size:15px;flex-shrink:0;">🔒</span>
+            <span>Pasting a link is <u>paid plans only</u> — it's not free-tier broken, it's by design (links pull bandwidth through our proxy). Uploading your own video below is free either way.</span>
+          </div>
           <button type="button" class="upload-btn" id="uploadTriggerBtn">⤒ Upload your own video</button>
           <input type="file" id="editorFileInput" accept="video/*" style="display:none;">
           <div class="upload-filename" id="uploadFilename">
@@ -2475,13 +2478,24 @@
     document.querySelectorAll('.modal-panel').forEach(p=> p.classList.toggle('active', p.dataset.modalPanel===tab));
   }
   let currentUser = null;
-  // Shows the "Paid plans only" badge next to the URL field for anyone
-  // not signed in or still on the free plan — matches what
-  // checkUsageAllowed('youtube') actually enforces, just surfaced before
-  // they hit submit instead of after.
+  // Shows a full-width "paid plans only" notice under the URL field for
+  // anyone not signed in or still on the free plan — matches what
+  // checkUsageAllowed('youtube') actually enforces server-side, just
+  // surfaced clearly up front instead of only after someone pastes a
+  // link, hits Generate, and gets rejected. Also swaps the input's own
+  // placeholder so the restriction is visible even before the banner
+  // registers — the goal is nobody mistakes this for the tool being
+  // broken or a bait-and-switch.
   function updateUrlPaidBadge(){
     const badge = document.getElementById('urlPaidBadge');
-    if(badge) badge.style.display = (!currentUser || currentUser.plan === 'free') ? 'inline-block' : 'none';
+    const restricted = !currentUser || currentUser.plan === 'free';
+    if(badge) badge.style.display = restricted ? 'flex' : 'none';
+    const urlInput = document.getElementById('editorInput');
+    if(urlInput && document.activeElement !== urlInput){
+      urlInput.placeholder = restricted
+        ? '🔒 Paid plans only — paste a link, or upload your own video below (free)'
+        : 'Paste a YouTube, Twitch, or podcast link…';
+    }
   }
   async function checkSession(){
     if(!getToken()){ updateUrlPaidBadge(); return; } // never signed in on this browser — skip the call
