@@ -1110,7 +1110,9 @@
             </div>
             <div class="effects-section">
               <div class="effects-label">Background gameplay (split-screen)</div>
-              <div style="font-size:12.5px;color:var(--iron);margin-bottom:10px;">Upload your own gameplay clip (Subway Surfers, an obby, whatever) — it plays muted on the bottom half, with the real clip on top. A common trick to look less templated. This app doesn't provide or fetch any gameplay footage — it's whatever you upload. Not applied to every clip automatically — toggle it per clip below.</div>
+              <div style="font-size:12.5px;color:var(--iron);margin-bottom:10px;">Real clip on top, muted gameplay looping on the bottom — a common trick to look less templated. Not applied to every clip automatically, it's a per-clip toggle below.</div>
+              <div class="cg-swatches" id="gameplayBgPresets" style="display:none;margin-bottom:12px;"></div>
+              <div style="font-size:12px;color:var(--iron);margin-bottom:8px;">— or upload your own —</div>
               <button type="button" class="upload-btn" id="gameplayBgUploadTriggerBtn">⤒ Upload gameplay clip</button>
               <input type="file" id="gameplayBgFileInput" accept="video/*" style="display:none;">
               <div class="upload-filename" id="gameplayBgUploadFilename">
@@ -1119,7 +1121,7 @@
               </div>
               <label class="zoom-toggle-row" style="margin-top:12px;margin-bottom:0;">
                 <input type="checkbox" id="gameplayBgToggle" disabled>
-                Split-screen THIS clip with the uploaded gameplay background
+                Split-screen THIS clip with the background picked above
               </label>
               <div class="editor-status" id="gameplayBgStatus" style="margin-top:8px;"><span class="spin"></span><span id="gameplayBgStatusText">Compositing…</span></div>
             </div>
@@ -1572,10 +1574,53 @@
     // generate so it auto-re-uploads, same as background music does, but
     // this flag resets to false the moment a new job starts.)
     let gameplayBgUploaded = false;
+    const gameplayBgPresetsEl = document.getElementById('gameplayBgPresets');
+    let selectedGameplayBgPreset = null;
 
     function updateGameplayBgToggleAvailability(){
-      gameplayBgToggle.disabled = !(gameplayBgUploaded && currentRealClipIndex > -1);
+      gameplayBgToggle.disabled = !((gameplayBgUploaded || selectedGameplayBgPreset) && currentRealClipIndex > -1);
     }
+
+    function selectGameplayBgPreset(name){
+      selectedGameplayBgPreset = name;
+      gameplayBgPresetsEl.querySelectorAll('.cg-swatch').forEach(btn=>{
+        btn.classList.toggle('active', btn.dataset.preset === name);
+      });
+      updateGameplayBgToggleAvailability();
+    }
+
+    async function loadGameplayBgPresets(){
+      try{
+        const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/gameplay-backgrounds`, { signal: AbortSignal.timeout(15000) });
+        if(!res.ok) return;
+        const data = await res.json();
+        const presets = data.presets || [];
+        if(!presets.length) return;
+        gameplayBgPresetsEl.innerHTML = '';
+        presets.forEach(name=>{
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'cg-swatch';
+          btn.dataset.preset = name;
+          btn.textContent = name.replace(/_/g,' ').replace(/\b\w/g, c=>c.toUpperCase());
+          btn.addEventListener('click', ()=>{
+            if(selectedGameplayBgPreset === name){
+              selectGameplayBgPreset(null); // deselect — fall back to custom upload if any
+            }else{
+              selectGameplayBgPreset(name);
+            }
+          });
+          gameplayBgPresetsEl.appendChild(btn);
+        });
+        gameplayBgPresetsEl.style.display = 'flex';
+        if(!selectedGameplayBgPreset){
+          selectGameplayBgPreset(presets[0]); // default to first built-in background
+        }
+      }catch(err){
+        console.warn('Clipsmith: could not load gameplay background presets.', err);
+      }
+    }
+    loadGameplayBgPresets();
 
     async function uploadGameplayBgIfNeeded(){
       if(!selectedGameplayBgFile || !currentJobId) return;
@@ -1645,7 +1690,13 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           signal: AbortSignal.timeout(90000),
-          body: JSON.stringify({ clip_file: clip.file, enabled }),
+          body: JSON.stringify({
+            clip_file: clip.file,
+            enabled,
+            // Custom upload wins if you've uploaded one for this job; otherwise
+            // use whichever built-in preset is selected.
+            preset: (gameplayBgUploaded && selectedGameplayBgFile) ? null : selectedGameplayBgPreset,
+          }),
         });
         if(!res.ok){
           const err = await res.json().catch(()=>({detail:'Unknown error'}));
