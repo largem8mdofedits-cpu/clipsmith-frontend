@@ -495,6 +495,10 @@
   .sfx-marker{position:absolute;top:4px;bottom:4px;width:3px;background:var(--ember);border-radius:2px;cursor:pointer;}
   .sfx-marker:hover{background:#ff5c5c;}
   .sfx-marker::after{content:attr(data-label);position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--iron);white-space:nowrap;text-transform:capitalize;}
+  .sfx-playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--paper);pointer-events:none;left:0;z-index:2;}
+  .sfx-time-readout{position:absolute;top:-22px;left:0;transform:translateX(-50%);font-family:var(--font-mono);font-size:11px;color:var(--paper);background:var(--panel-2);border:1px solid var(--line-strong);border-radius:3px;padding:1px 6px;pointer-events:none;white-space:nowrap;z-index:2;}
+  .sfx-time-ticks{position:relative;height:14px;margin-top:4px;font-family:var(--font-mono);font-size:9.5px;color:var(--iron);}
+  .sfx-time-ticks span{position:absolute;top:0;}
   .cap-row{
     display:flex;gap:12px;align-items:flex-start;padding:10px 10px;border-radius:5px;
     border:1px solid transparent;cursor:pointer;margin-bottom:4px;
@@ -1085,7 +1089,11 @@
                 <button class="cg-swatch" data-sfx="keyboard">Keyboard</button>
               </div>
               <div id="sfxTimelineHint" style="font-size:12px;color:var(--iron);margin-top:12px;">Generate a clip first to place sound effects.</div>
-              <div class="sfx-timeline-track" id="sfxTimelineTrack" style="display:none;"></div>
+              <div class="sfx-timeline-track" id="sfxTimelineTrack" style="display:none;">
+                <div class="sfx-playhead" id="sfxPlayhead" style="display:none;"></div>
+                <div class="sfx-time-readout" id="sfxTimeReadout" style="display:none;">0:00</div>
+              </div>
+              <div class="sfx-time-ticks" id="sfxTimeTicks" style="display:none;"></div>
               <div id="sfxTimelineControls" style="display:none;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap;">
                 <button type="button" class="btn" id="sfxUndoBtn" style="padding:6px 12px;font-size:12px;" disabled>↺ Undo</button>
                 <button type="button" class="btn" id="sfxRedoBtn" style="padding:6px 12px;font-size:12px;" disabled>↻ Redo</button>
@@ -1666,6 +1674,9 @@
     const sfxRedoBtn = document.getElementById('sfxRedoBtn');
     const sfxClearBtn = document.getElementById('sfxClearBtn');
     const sfxApplyStatus = document.getElementById('sfxApplyStatus');
+    const sfxPlayhead = document.getElementById('sfxPlayhead');
+    const sfxTimeReadout = document.getElementById('sfxTimeReadout');
+    const sfxTimeTicks = document.getElementById('sfxTimeTicks');
 
     document.querySelectorAll('#sfxSwatches .cg-swatch').forEach(sw=>{
       sw.addEventListener('click', ()=>{
@@ -1717,6 +1728,48 @@
       if(sfxUndoStack.length > 50) sfxUndoStack.shift();
       sfxRedoStack = [];
     }
+
+    // Static "0:00 ... 0:20" labels under the track — regenerated only
+    // when the current clip (and therefore its duration) changes, not on
+    // every marker add/remove, since the positions never move otherwise.
+    function renderSfxTimeTicks(){
+      sfxTimeTicks.innerHTML = '';
+      const dur = sfxClipDuration();
+      const n = 5;
+      for(let i=0;i<n;i++){
+        const t = dur * i / (n-1);
+        const span = document.createElement('span');
+        const pct = i/(n-1)*100;
+        span.style.left = pct + '%';
+        span.style.transform = i===0 ? 'translateX(0)' : i===n-1 ? 'translateX(-100%)' : 'translateX(-50%)';
+        span.textContent = fmt(t);
+        sfxTimeTicks.appendChild(span);
+      }
+    }
+
+    // Hovering (or dragging) across the timeline moves a playhead, shows
+    // a live "0:07" readout, and seeks the actual clip preview to that
+    // exact frame — so it's obvious exactly what moment a given spot on
+    // the track corresponds to before you commit to placing an effect
+    // there. Works for both a plain hover and a click-and-drag, since
+    // mousemove fires either way.
+    sfxTimelineTrack.addEventListener('mousemove', (e)=>{
+      const rect = sfxTimelineTrack.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const time = pct * sfxClipDuration();
+      sfxPlayhead.style.left = (pct*100) + '%';
+      sfxPlayhead.style.display = 'block';
+      sfxTimeReadout.style.left = (pct*100) + '%';
+      sfxTimeReadout.textContent = fmt(time);
+      sfxTimeReadout.style.display = 'block';
+      if(currentRealClipIndex > -1 && realClipVideo.readyState > 0){
+        realClipVideo.currentTime = Math.min(time, realClipVideo.duration || time);
+      }
+    });
+    sfxTimelineTrack.addEventListener('mouseleave', ()=>{
+      sfxPlayhead.style.display = 'none';
+      sfxTimeReadout.style.display = 'none';
+    });
 
     sfxTimelineTrack.addEventListener('click', (e)=>{
       if(!armedSfx) return;
@@ -1806,8 +1859,12 @@
       const hasClip = currentRealClipIndex > -1;
       sfxTimelineHint.style.display = hasClip ? 'none' : 'block';
       sfxTimelineTrack.style.display = hasClip ? 'block' : 'none';
+      sfxTimeTicks.style.display = hasClip ? 'block' : 'none';
       sfxTimelineControls.style.display = hasClip ? 'flex' : 'none';
+      sfxPlayhead.style.display = 'none';
+      sfxTimeReadout.style.display = 'none';
       renderSfxMarkers();
+      if(hasClip) renderSfxTimeTicks();
     }
 
     document.getElementById('zoomPanToggle').addEventListener('change', scheduleRestyle);
