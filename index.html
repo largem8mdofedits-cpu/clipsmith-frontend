@@ -32,7 +32,6 @@
     --font-body:'Inter',sans-serif;
     --font-mono:'JetBrains Mono',monospace;
   }
-
   *{box-sizing:border-box;margin:0;padding:0;}
   html{scroll-behavior:smooth;}
   body{
@@ -47,7 +46,6 @@
   a{color:inherit;text-decoration:none;}
   ul{list-style:none;}
   button{font-family:inherit;cursor:pointer;}
-
   /* subtle film-grain overlay — sits above everything, ignores clicks.
      Gives the dark theme a less "flat CSS" and more premium/editorial feel. */
   body::after{
@@ -55,10 +53,8 @@
     opacity:0.035;mix-blend-mode:overlay;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
-
   .wrap{max-width:1180px;margin:0 auto;padding:0 32px;}
   @media(max-width:640px){.wrap{padding:0 20px;}}
-
   h1,h2,h3,h4{font-family:var(--font-display);text-transform:uppercase;letter-spacing:0.01em;font-weight:700;line-height:1.05;}
   .eyebrow{
     font-family:var(--font-mono);
@@ -69,7 +65,6 @@
     display:flex;align-items:center;gap:10px;
   }
   .eyebrow::before{content:'';width:18px;height:1px;background:var(--ember);display:inline-block;}
-
   /* ===== Timeline ruler — signature structural motif ===== */
   .ruler{
     position:relative;
@@ -96,7 +91,6 @@
     letter-spacing:0.05em;
   }
   @media(prefers-reduced-motion:reduce){ .ruler .playhead{animation:none;left:30%;} }
-
   /* ===== Nav ===== */
   header{
     position:sticky;top:0;z-index:50;
@@ -134,7 +128,6 @@
   .nav-signin{font-size:14px;color:var(--iron);transition:color .2s;}
   .nav-signin:hover{color:var(--paper);}
   .menu-btn{display:none;background:none;border:0;color:var(--paper);font-size:24px;}
-
   .btn{
     display:inline-flex;align-items:center;justify-content:center;gap:8px;
     padding:13px 24px;border-radius:3px;font-weight:600;font-size:14px;
@@ -152,7 +145,6 @@
   .btn-ghost{border-color:var(--line-strong);color:var(--paper);background:transparent;transition:border-color .2s,transform .18s,background .2s;}
   .btn-ghost:hover{border-color:var(--paper);transform:translateY(-2px);background:rgba(242,243,245,0.04);}
   .btn-block{width:100%;}
-
   /* ===== Hero ===== */
   .hero{position:relative;padding:96px 0 64px;overflow:hidden;}
   .hero::before{
@@ -186,7 +178,6 @@
   .hero-actions{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:28px;}
   .hero-note{font-family:var(--font-mono);font-size:12.5px;color:var(--iron);letter-spacing:0.02em;}
   .hero-note b{color:var(--ember-glow);font-weight:500;}
-
   /* hero visual: waveform / clip window */
   .clip-window{
     background:var(--panel);border:1px solid var(--line);border-radius:6px;
@@ -252,7 +243,6 @@
   .waveform span:nth-child(odd){background:var(--ember);opacity:0.85;}
   @keyframes bounce{0%,100%{transform:scaleY(0.3)}50%{transform:scaleY(1)}}
   @media(prefers-reduced-motion:reduce){.waveform span{animation:none;}}
-
   /* ===== Proof strip — honest capability stats, not fake user counts ===== */
   .proof-strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--panel);}
   .proof-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);}
@@ -266,13 +256,11 @@
   .proof-item:hover .icon{transform:scale(1.15) rotate(-6deg);}
   .proof-item .num{font-family:var(--font-display);font-size:26px;color:var(--paper);line-height:1;}
   .proof-item .lbl{font-size:12.5px;color:var(--iron);margin-top:4px;}
-
   /* ===== Section shell ===== */
   section{padding:88px 0;}
   .section-head{max-width:600px;margin-bottom:48px;}
   .section-head h2{font-size:clamp(28px,4vw,42px);margin-top:14px;}
   .section-head p{color:var(--iron);font-size:16px;margin-top:14px;}
-
   /* ===== Features ===== */
   .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);}
   @media(max-width:860px){.feature-grid{grid-template-columns:repeat(2,1fr);}}
@@ -292,7 +280,6 @@
   .feature p{color:var(--iron);font-size:14.5px;}
   .feature .icon{width:34px;height:34px;margin-bottom:10px;color:var(--ember);transition:transform .3s ease;}
   .feature:hover .icon{transform:scale(1.12) rotate(-4deg);}
-
   /* ===== Free trial banner ===== */
   .trial-banner{
     background:linear-gradient(120deg, var(--panel) 0%, var(--panel-2) 100%);
@@ -315,7 +302,6 @@
     background:rgba(0,0,0,0.25);flex-shrink:0;position:relative;
   }
   .trial-timer span{font-size:13px;color:var(--iron);display:block;text-align:center;margin-top:4px;font-family:var(--font-body);}
-
   /* ===== How it works ===== */
   .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;}
   @media(max-width:860px){.steps{grid-template-columns:1fr;}}
@@ -323,7 +309,6 @@
   .step .tc-mark{font-family:var(--font-mono);color:var(--ember);font-size:13px;}
   .step h3{font-family:var(--font-body);text-transform:none;font-size:18px;margin:10px 0 8px;letter-spacing:0;}
   .step p{color:var(--iron);font-size:14.5px;}
-
   /* AI Tools promo — sits right above the editor so it's impossible to
      miss that image gen / voiceover / bg removal / etc live on a separate
      page, instead of being buried as one word in the top nav. */
@@ -354,7 +339,6 @@
     .tools-promo-text{order:2;flex-basis:100%;}
     .tools-promo-cta{order:3;}
   }
-
   /* ===== Editor tab ===== */
   .editor-app{
     background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;
@@ -456,11 +440,9 @@
     border-top-color:var(--ember);animation:spin 0.8s linear infinite;
   }
   @keyframes spin{to{transform:rotate(360deg)}}
-
   .editor-workspace{display:none;grid-template-columns:340px 1fr;}
   .editor-workspace.on{display:grid;}
   @media(max-width:860px){.editor-workspace.on{grid-template-columns:1fr;}}
-
   .editor-preview-col{padding:28px;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;}
   @media(max-width:860px){.editor-preview-col{border-right:0;border-bottom:1px solid var(--line);}}
   .editor-phone{
@@ -494,7 +476,6 @@
   .editor-preview-controls .time{font-family:var(--font-mono);font-size:11px;color:var(--iron);white-space:nowrap;}
   .mini-bar{flex:1;height:4px;background:var(--line-strong);border-radius:2px;position:relative;overflow:hidden;}
   .mini-bar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--ember);width:0%;}
-
   /* Left icon rail — Crayo-style tool switcher (Media/Subtitles/Text/Audio/
      Video/Tools reference) instead of the old horizontal text-tab row.
      Same five tools underneath, just restyled as a vertical icon column. */
@@ -510,7 +491,10 @@
   .editor-tab-btn.active{color:var(--paper);border-color:var(--ember);background:var(--panel-2);}
   .editor-panel{display:none;}
   .editor-panel.active{display:block;flex:1;min-width:0;}
-
+  .sfx-timeline-track{position:relative;height:44px;background:var(--void);border:1px solid var(--line-strong);border-radius:6px;cursor:crosshair;margin-top:10px;overflow:visible;}
+  .sfx-marker{position:absolute;top:4px;bottom:4px;width:3px;background:var(--ember);border-radius:2px;cursor:pointer;}
+  .sfx-marker:hover{background:#ff5c5c;}
+  .sfx-marker::after{content:attr(data-label);position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--iron);white-space:nowrap;text-transform:capitalize;}
   .cap-row{
     display:flex;gap:12px;align-items:flex-start;padding:10px 10px;border-radius:5px;
     border:1px solid transparent;cursor:pointer;margin-bottom:4px;
@@ -522,7 +506,6 @@
     flex:1;font-size:14px;outline:none;border-bottom:1px dashed transparent;
   }
   .cap-row .cap-text:focus{border-bottom-color:var(--line-strong);}
-
   /* Picture-card caption style picker — each card renders a live mini
      preview of that style (reusing the same .cap-overlay.style-* classes
      the real caption uses) instead of a plain text button. */
@@ -535,21 +518,18 @@
   .style-card-preview .cap-overlay{position:static;font-size:11px;padding:4px 6px;}
   .style-card-label{padding:8px 10px;font-size:12px;font-weight:600;color:var(--iron);}
   .style-card.active .style-card-label{color:var(--paper);background:var(--panel-2);}
-
   .music-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line);}
   .music-row:last-child{border-bottom:0;}
   .switch{width:38px;height:22px;border-radius:12px;background:var(--line-strong);position:relative;flex-shrink:0;border:0;}
   .switch::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--paper);transition:transform .2s;}
   .switch.on{background:var(--ember);}
   .switch.on::after{transform:translateX(16px);}
-
   .export-box{text-align:center;padding:18px 0;}
   .export-progress{height:6px;background:var(--void);border:1px solid var(--line-strong);border-radius:3px;overflow:hidden;margin:18px 0;display:none;}
   .export-progress.on{display:block;}
   .export-progress .fill{height:100%;width:0%;background:var(--ember);transition:width .1s linear;}
   .export-done{display:none;color:var(--ember-glow);font-family:var(--font-mono);font-size:13px;margin-top:10px;}
   .export-done.on{display:block;}
-
   .editor-timeline{padding:0 28px 28px;}
   .editor-timeline .label-row{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;color:var(--iron);margin-bottom:8px;}
   .trim-track{position:relative;height:52px;border-radius:5px;overflow:hidden;background:var(--void);border:1px solid var(--line-strong);}
@@ -586,7 +566,6 @@
     letter-spacing:0.04em;margin-bottom:10px;
   }
   .playhead-mini{position:absolute;top:0;bottom:0;width:2px;background:var(--paper);pointer-events:none;left:0;}
-
   /* ===== Pricing ===== */
   .billing-toggle{
     display:inline-flex;align-items:center;gap:14px;background:var(--panel);
@@ -598,7 +577,6 @@
   }
   .billing-toggle button.active{background:var(--ember);color:#ffffff;}
   .save-tag{font-family:var(--font-mono);font-size:11px;color:var(--ember-glow);margin-left:2px;}
-
   .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:stretch;}
   @media(max-width:900px){.pricing-grid{grid-template-columns:1fr;max-width:420px;margin:0 auto;}}
   .plan{
@@ -629,7 +607,6 @@
   .plan li::before{content:'';flex-shrink:0;width:6px;height:6px;background:var(--ember);margin-top:6px;border-radius:1px;}
   .plan li.muted{color:var(--iron);}
   .plan li.muted::before{background:var(--line-strong);}
-
   /* ===== Payment methods ===== */
   .pay-row{
     margin-top:52px;padding-top:36px;border-top:1px solid var(--line);
@@ -641,7 +618,6 @@
     border:1px solid var(--line-strong);padding:8px 14px;border-radius:4px;
     font-size:12.5px;font-weight:600;color:var(--iron);letter-spacing:0.02em;
   }
-
   /* ===== Testimonials ===== */
   .quotes{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
   @media(max-width:860px){.quotes{grid-template-columns:1fr;}}
@@ -660,7 +636,6 @@
     font-family:var(--font-display);font-size:13px;color:#ffffff;font-weight:700;
   }
   .quote .who{font-family:var(--font-mono);font-size:12px;color:var(--iron);}
-
   /* ===== FAQ ===== */
   .faq{max-width:760px;}
   .faq details{border-bottom:1px solid var(--line);padding:20px 0;}
@@ -672,12 +647,10 @@
   .faq summary::after{content:'+';color:var(--ember);font-size:20px;font-weight:400;}
   .faq details[open] summary::after{content:'−';}
   .faq p{color:var(--iron);font-size:14.5px;margin-top:12px;max-width:640px;}
-
   /* ===== Final CTA ===== */
   .final-cta{text-align:center;padding:100px 0;}
   .final-cta h2{font-size:clamp(32px,5vw,54px);}
   .final-cta p{color:var(--iron);max-width:480px;margin:16px auto 32px;}
-
   /* ===== Footer ===== */
   footer{border-top:1px solid var(--line);padding:48px 0 32px;}
   .foot-grid{display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap;margin-bottom:36px;}
@@ -689,12 +662,10 @@
   .foot-cols{display:flex;gap:56px;flex-wrap:wrap;}
   .foot-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;padding-top:24px;border-top:1px solid var(--line);}
   .foot-bottom p{font-size:12.5px;color:var(--iron);font-family:var(--font-mono);}
-
   /* reveal animation */
   .reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease, transform .6s ease;}
   .reveal.in{opacity:1;transform:translateY(0);}
   @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}}
-
   @media(max-width:860px){
     .nav-links{display:none;}
     .menu-btn{display:block;}
@@ -703,7 +674,6 @@
     display:flex;flex-direction:column;position:absolute;top:74px;left:0;right:0;
     background:var(--void);border-bottom:1px solid var(--line);padding:18px 32px;gap:18px;z-index:60;
   }
-
   /* ===== Auth modal ===== */
   .modal-overlay{
     display:none;position:fixed;inset:0;background:rgba(10,8,7,0.7);z-index:100;
@@ -736,7 +706,6 @@
 </style>
 </head>
 <body>
-
 <header>
   <div class="wrap nav">
     <div class="logo">VIRAL<span class="dot">•</span>CUT</div>
@@ -755,7 +724,6 @@
     <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
   </div>
 </header>
-
 <!-- AUTH MODAL -->
 <div class="modal-overlay" id="authModal">
   <div class="modal-box">
@@ -764,7 +732,6 @@
       <button class="modal-tab-btn active" data-modal-tab="login" onclick="switchAuthTab('login')">Sign in</button>
       <button class="modal-tab-btn" data-modal-tab="signup" onclick="switchAuthTab('signup')">Create account</button>
     </div>
-
     <form class="modal-panel active" data-modal-panel="login" id="loginForm">
       <div>
         <label>Email</label>
@@ -778,7 +745,6 @@
       <button type="submit" class="btn btn-primary btn-block">Sign in</button>
       <div class="modal-note">No account yet? <a href="javascript:void(0)" onclick="switchAuthTab('signup')" style="color:var(--ember-glow);">Create one</a></div>
     </form>
-
     <form class="modal-panel" data-modal-panel="signup" id="signupForm">
       <div>
         <label>Email</label>
@@ -794,7 +760,6 @@
     </form>
   </div>
 </div>
-
 <div class="ruler">
   <div class="playhead"></div>
   <span class="tc" style="left:4%">00:00:00</span>
@@ -802,7 +767,6 @@
   <span class="tc" style="left:54%">00:00:31</span>
   <span class="tc" style="left:79%">00:00:47</span>
 </div>
-
 <!-- HERO -->
 <section class="hero">
   <div class="orb orb-a"></div>
@@ -843,7 +807,6 @@
     </div>
   </div>
 </section>
-
 <!-- PROOF STRIP -->
 <section class="proof-strip" style="padding:0;">
   <div class="proof-grid">
@@ -865,9 +828,7 @@
     </div>
   </div>
 </section>
-
 <div class="ruler"><div class="playhead" style="animation-duration:18s;"></div></div>
-
 <!-- FEATURES -->
 <section id="features">
   <div class="wrap">
@@ -916,7 +877,6 @@
     </div>
   </div>
 </section>
-
 <!-- FREE TRIAL -->
 <section>
   <div class="wrap">
@@ -924,15 +884,13 @@
       <div>
         <div class="eyebrow">FREE TO TRY</div>
         <h3>Ten clips, on us — no card required.</h3>
-        <p>Full access from the moment you sign up — every caption style, voiceover language, and export size, at full 1080p with no watermark. Upload your own video and generate 10 clips free. Pasting a YouTube link needs a plan, since that pulls bandwidth through our paid proxy.</p>
+        <p>Full access from the moment you sign up — every caption style, voiceover language, and export size, at full 1080p with no watermark. Upload your own video and generate 10 clips free, and it refills every 4 days. Pasting a YouTube link needs a plan, since that pulls bandwidth through our paid proxy.</p>
       </div>
-      <div class="trial-timer">10<span>free clips from uploads</span></div>
+      <div class="trial-timer">10<span>free uploads / 4 days</span></div>
     </div>
   </div>
 </section>
-
 <div class="ruler"><div class="playhead" style="animation-duration:11s;"></div></div>
-
 <!-- HOW IT WORKS -->
 <section id="how">
   <div class="wrap">
@@ -959,9 +917,7 @@
     </div>
   </div>
 </section>
-
 <div class="ruler"><div class="playhead" style="animation-duration:13s;"></div></div>
-
 <!-- EDITOR -->
 <section id="editor">
   <div class="wrap">
@@ -970,7 +926,6 @@
       <h2>Paste a link, get a captioned clip. Then edit it like you would in CapCut.</h2>
       <p>ViralCut auto-generates a captioned, reframed clip in seconds — then hands you a real timeline to trim, restyle captions, and adjust before you export.</p>
     </div>
-
     <a href="tools.html" class="tools-promo reveal">
       <div class="tools-promo-icons">
         <span class="tools-promo-ico">🖼️</span>
@@ -984,7 +939,6 @@
       </div>
       <span class="tools-promo-cta">Open AI Tools →</span>
     </a>
-
     <div class="editor-app reveal">
       <div class="editor-app-titlebar">
         <div class="dots"><span></span><span></span><span></span></div>
@@ -1036,7 +990,6 @@
         <div class="editor-status" id="editorStatus"><span class="spin"></span><span id="editorStatusText">Transcribing audio…</span></div>
         <div class="editor-status" id="paywallNotice" style="color:var(--ember-glow);"><span id="paywallText"></span> <a href="#pricing" onclick="closeEditorPaywall()" style="color:var(--ember);font-weight:700;margin-left:6px;">Upgrade →</a></div>
       </div>
-
       <div class="editor-workspace" id="editorWorkspace">
         <div class="editor-preview-col">
           <div class="editor-phone" id="editorPhone">
@@ -1052,7 +1005,6 @@
           <div id="clipSwitcher" style="display:none;flex-wrap:wrap;gap:8px;margin-top:14px;width:100%;max-width:250px;"></div>
           <button type="button" class="reclip-btn" id="reclipBtn" style="display:none;">↻ Try a different moment</button>
         </div>
-
         <div class="editor-tools">
           <div class="real-badge" id="modeBadge" style="display:none;">Real AI clip</div>
           <div class="editor-tabs">
@@ -1062,9 +1014,7 @@
             <button class="editor-tab-btn" data-tab="voiceover" id="voiceoverTabBtn" style="display:none;"><span class="tab-icon">🎙️</span>Voice-over</button>
             <button class="editor-tab-btn" data-tab="export"><span class="tab-icon">⤓</span>Export</button>
           </div>
-
           <div class="editor-panel active" data-panel="captions" id="captionList"></div>
-
           <div class="editor-panel" data-panel="voiceover">
             <div style="font-size:12.5px;color:var(--iron);margin-bottom:10px;">AI-narrated script for this clip — edit the text and regenerate the voice anytime.</div>
             <textarea id="voiceoverScript" class="vo-script-box" rows="4"></textarea>
@@ -1081,7 +1031,6 @@
             </div>
             <div class="editor-status" id="voiceoverStatus" style="margin-top:10px;"><span class="spin"></span><span id="voiceoverStatusText">Synthesizing…</span></div>
           </div>
-
           <div class="editor-panel" data-panel="style">
             <div class="effects-section">
               <div class="effects-label">Caption style</div>
@@ -1104,7 +1053,6 @@
                 </button>
               </div>
             </div>
-
             <div class="effects-section">
               <div class="effects-label">Motion</div>
               <label class="zoom-toggle-row">
@@ -1116,7 +1064,6 @@
                 Flash intro (camera-flash fade-in + shutter click)
               </label>
             </div>
-
             <div class="effects-section">
               <div class="effects-label">Color grading</div>
               <div class="cg-swatches" id="colorGradeSwatches">
@@ -1128,24 +1075,22 @@
                 <button class="cg-swatch" data-preset="cinematic">Cinematic</button>
               </div>
             </div>
-
             <div class="effects-section">
-              <div class="effects-label">Sound effects</div>
+              <div class="effects-label">Sound effects — click one, then click the timeline below to drop it (click it again to stop placing)</div>
               <div class="cg-swatches" id="sfxSwatches">
-                <button class="cg-swatch active" data-sfx="none">None</button>
-                <button class="cg-swatch" data-sfx="ting">Ting</button>
-                <button class="cg-swatch" data-sfx="pop">Pop</button>
                 <button class="cg-swatch" data-sfx="whoosh">Whoosh</button>
-                <button class="cg-swatch" data-sfx="click">Click</button>
+                <button class="cg-swatch" data-sfx="click">Mouse click</button>
+                <button class="cg-swatch" data-sfx="pop">Bubble pop</button>
+                <button class="cg-swatch" data-sfx="ting">Ting</button>
+                <button class="cg-swatch" data-sfx="keyboard">Keyboard</button>
               </div>
-              <div style="display:flex;gap:14px;align-items:center;margin-top:10px;flex-wrap:wrap;">
-                <label style="font-size:12.5px;color:var(--iron);display:flex;align-items:center;gap:6px;">
-                  Play at:
-                  <select id="sfxPositionSelect" style="background:var(--void);border:1px solid var(--line-strong);color:var(--paper);padding:6px 10px;border-radius:4px;font-size:12.5px;">
-                    <option value="end" selected>End</option>
-                    <option value="start">Start</option>
-                  </select>
-                </label>
+              <div id="sfxTimelineHint" style="font-size:12px;color:var(--iron);margin-top:12px;">Generate a clip first to place sound effects.</div>
+              <div class="sfx-timeline-track" id="sfxTimelineTrack" style="display:none;"></div>
+              <div id="sfxTimelineControls" style="display:none;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+                <button type="button" class="btn" id="sfxUndoBtn" style="padding:6px 12px;font-size:12px;" disabled>↺ Undo</button>
+                <button type="button" class="btn" id="sfxRedoBtn" style="padding:6px 12px;font-size:12px;" disabled>↻ Redo</button>
+                <button type="button" class="btn" id="sfxClearBtn" style="padding:6px 12px;font-size:12px;">Clear all</button>
+                <span id="sfxApplyStatus" style="font-size:12px;color:var(--iron);"></span>
               </div>
               <label class="zoom-toggle-row" style="margin-top:12px;margin-bottom:0;">
                 <input type="checkbox" id="typingSoundToggle">
@@ -1153,7 +1098,6 @@
               </label>
             </div>
           </div>
-
           <div class="editor-panel" data-panel="music">
             <div style="font-size:12.5px;color:var(--iron);margin-bottom:10px;">Upload an audio file — it'll be mixed in as low-volume background music under the clip's audio.</div>
             <button type="button" class="upload-btn" id="musicUploadTriggerBtn">⤒ Upload music</button>
@@ -1163,7 +1107,6 @@
               <button type="button" class="clear-upload" id="clearMusicBtn">remove</button>
             </div>
           </div>
-
           <div class="editor-panel" data-panel="export">
             <div class="export-box">
               <button class="btn btn-primary btn-block" id="exportBtn">Export 1080p, no watermark</button>
@@ -1173,7 +1116,6 @@
           </div>
         </div>
       </div>
-
       <div class="editor-timeline" id="editorTimeline" style="display:none;">
         <div class="label-row">
           <span>Timeline</span>
@@ -1199,7 +1141,6 @@
     </div>
   </div>
 </section>
-
 <!-- PRICING -->
 <section id="pricing">
   <div class="wrap">
@@ -1208,12 +1149,10 @@
       <h2>Start free. Upgrade when you outgrow it.</h2>
       <p>Upload your own video and try 10 clips free. Pasting a YouTube link needs a plan — pick the tier that matches how much source video you clip each month.</p>
     </div>
-
     <div class="billing-toggle reveal">
       <button class="active" id="btn-monthly">Monthly</button>
       <button id="btn-yearly">Yearly <span class="save-tag">save 20%</span></button>
     </div>
-
     <div class="pricing-grid reveal">
       <div class="plan">
         <div class="tier">Starter</div>
@@ -1229,7 +1168,6 @@
         </ul>
         <a href="javascript:void(0)" class="btn btn-ghost btn-block" onclick="startCheckout('starter', this)">Get Starter</a>
       </div>
-
       <div class="plan featured">
         <div class="badge">Most popular</div>
         <div class="tier">Pro</div>
@@ -1246,7 +1184,6 @@
         </ul>
         <a href="javascript:void(0)" class="btn btn-primary btn-block" onclick="startCheckout('pro', this)">Get Pro</a>
       </div>
-
       <div class="plan">
         <div class="tier">Elite</div>
         <div class="price"><sup>$</sup><span class="amt" data-m="69" data-y="55">69</span></div>
@@ -1263,7 +1200,6 @@
         <a href="javascript:void(0)" class="btn btn-ghost btn-block" onclick="startCheckout('elite', this)">Get Elite</a>
       </div>
     </div>
-
     <div class="pay-row reveal">
       <div class="label">Accepted payment methods</div>
       <div class="pay-badges">
@@ -1278,9 +1214,7 @@
     </div>
   </div>
 </section>
-
 <div class="ruler"><div class="playhead" style="animation-duration:16s;"></div></div>
-
 <!-- TESTIMONIALS -->
 <section>
   <div class="wrap">
@@ -1334,7 +1268,6 @@
     </div>
   </div>
 </section>
-
 <!-- FAQ -->
 <section id="faq">
   <div class="wrap">
@@ -1345,7 +1278,7 @@
     <div class="faq reveal">
       <details open>
         <summary>What happens after my free uploads run out?</summary>
-        <p>You'll be prompted to pick a plan before any further renders start — nothing renders or charges automatically. The free trial is a one-time signup bonus (10 clips from your own uploaded video), not a recurring allowance, so subscribing is what keeps you rendering after it's used. Pasting a YouTube link always requires a plan, even before your free uploads run out — uploads don't touch our proxy, YouTube links do.</p>
+        <p>You'll be prompted to pick a plan before any further renders start — nothing renders or charges automatically. Free uploads refill on a rolling 4-day window (10 uploads from your own video every 4 days), so you don't need to subscribe just to keep testing with your own footage — subscribing gets you unlimited uploads plus YouTube-link clipping. Pasting a YouTube link always requires a plan, even if you still have free uploads left — uploads don't touch our proxy, YouTube links do.</p>
       </details>
       <details>
         <summary>Do exports have a watermark?</summary>
@@ -1362,7 +1295,6 @@
     </div>
   </div>
 </section>
-
 <!-- FINAL CTA -->
 <section class="final-cta">
   <div class="wrap">
@@ -1373,7 +1305,6 @@
     </div>
   </div>
 </section>
-
 <footer>
   <div class="wrap">
     <div class="foot-grid">
@@ -1413,11 +1344,9 @@
     </div>
   </div>
 </footer>
-
 <script src="config.js"></script>
 <script>
   const BACKEND_URL = window.CLIPSMITH_BACKEND_URL;
-
   // Auth uses a bearer token (not cookies) so login works across the
   // frontend/backend's different domains — see server.js for why cookies
   // don't reliably survive that in modern browsers. Token lives in
@@ -1429,7 +1358,6 @@
     const t = getToken();
     return t ? { 'Authorization': `Bearer ${t}` } : {};
   }
-
   // reveal on scroll — items that share a grid parent (feature-grid, quotes,
   // steps, pricing-grid, proof-grid) get a small stagger delay based on
   // their position, so the grid cascades in instead of popping all at once.
@@ -1442,7 +1370,6 @@
       el.style.transitionDelay = Math.min(idx,6) * 70 + 'ms';
     }
   });
-
   // count-up animation for the honest capability stats in the proof strip
   // (caption styles, languages, formats) — not user/usage metrics.
   function animateCount(el){
@@ -1459,7 +1386,6 @@
     }
     requestAnimationFrame(tick);
   }
-
   const io = new IntersectionObserver((entries)=>{
     entries.forEach(e=>{
       if(e.isIntersecting){
@@ -1473,7 +1399,6 @@
     });
   }, {threshold:0.15});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
-
   // billing toggle
   const btnM = document.getElementById('btn-monthly');
   const btnY = document.getElementById('btn-yearly');
@@ -1489,7 +1414,6 @@
   }
   btnM.addEventListener('click', ()=>setBilling('monthly'));
   btnY.addEventListener('click', ()=>setBilling('yearly'));
-
   // ===== Editor =====
   (function(){
     const DURATION = 12;
@@ -1499,11 +1423,9 @@
       {start:5.4, end:8.2,  text:"until it's already too late"},
       {start:8.2, end:12,   text:"and that changed everything"}
     ];
-
     let trimStart = 0, trimEnd = DURATION;
     let currentTime = 0, isPlaying = false, playTimer = null;
     let activeStyle = 'style-bold';
-
     const form = document.getElementById('editorForm');
     const input = document.getElementById('editorInput');
     const genBtn = document.getElementById('generateBtn');
@@ -1518,7 +1440,6 @@
     const clearUploadBtn = document.getElementById('clearUploadBtn');
     const zoomPanToggle = document.getElementById('zoomPanToggle');
     let selectedFile = null;
-
     uploadTriggerBtn.addEventListener('click', ()=> editorFileInput.click());
     editorFileInput.addEventListener('change', ()=>{
       const f = editorFileInput.files && editorFileInput.files[0];
@@ -1539,7 +1460,6 @@
       uploadTriggerBtn.textContent = '⤒ Upload your own video';
       uploadFilename.classList.remove('on');
     });
-
     // Background music — a direct file upload instead of a YouTube-link
     // paste. Since music is shared across every clip in a job (see
     // find_bg_music in pipeline.py) it's sent to /upload-music as soon as
@@ -1554,7 +1474,6 @@
     const musicUploadFilenameText = document.getElementById('musicUploadFilenameText');
     const clearMusicBtn = document.getElementById('clearMusicBtn');
     let selectedMusicFile = null;
-
     async function uploadMusicIfNeeded(){
       if(!selectedMusicFile || !currentJobId) return;
       const fd = new FormData();
@@ -1574,7 +1493,6 @@
         paywallNotice.classList.add('on');
       }
     }
-
     musicUploadTriggerBtn.addEventListener('click', ()=> musicFileInput.click());
     musicFileInput.addEventListener('change', async ()=>{
       const f = musicFileInput.files && musicFileInput.files[0];
@@ -1608,7 +1526,6 @@
         scheduleRestyle();
       }
     });
-
     const capOverlay = document.getElementById('capOverlay');
     const playBtn = document.getElementById('playBtn');
     const miniFill = document.getElementById('miniFill');
@@ -1625,19 +1542,16 @@
     const trimLabel = document.getElementById('trimLabel');
     const playheadMini = document.getElementById('playheadMini');
     const trimWaveform = document.getElementById('trimWaveform');
-
     function fmt(t){
       const m = Math.floor(t/60), s = Math.floor(t%60);
       return m+':'+String(s).padStart(2,'0');
     }
-
     // build waveform bars once
     for(let i=0;i<40;i++){
       const bar = document.createElement('span');
       bar.style.height = (25+Math.random()*70)+'%';
       trimWaveform.appendChild(bar);
     }
-
     function renderCaptionList(){
       captionList.innerHTML = '';
       captions.forEach((c,i)=>{
@@ -1646,7 +1560,6 @@
         row.dataset.index = i;
         row.innerHTML = `<span class="cap-tc">${fmt(c.start)}</span><span class="cap-text" contenteditable="true" spellcheck="false">${c.text}</span>`;
         captionList.appendChild(row);
-
         row.querySelector('.cap-text').addEventListener('input', (e)=>{
           captions[i].text = e.target.textContent;
           if(getActiveIndex() === i){ capOverlay.textContent = captions[i].text; }
@@ -1658,7 +1571,6 @@
       });
       renderTicks();
     }
-
     function renderTicks(){
       capTicks.innerHTML = '';
       captions.forEach(c=>{
@@ -1668,11 +1580,9 @@
         capTicks.appendChild(t);
       });
     }
-
     function getActiveIndex(){
       return captions.findIndex(c=> currentTime >= c.start && currentTime < c.end);
     }
-
     function updatePreview(){
       const idx = getActiveIndex();
       if(idx > -1 && document.activeElement !== capOverlay){
@@ -1685,12 +1595,10 @@
         row.classList.toggle('active', i === idx);
       });
     }
-
     function seekTo(t){
       currentTime = Math.max(trimStart, Math.min(trimEnd, t));
       updatePreview();
     }
-
     function togglePlay(){
       isPlaying = !isPlaying;
       playBtn.textContent = isPlaying ? '❚❚' : '▶';
@@ -1705,7 +1613,6 @@
       }
     }
     playBtn.addEventListener('click', togglePlay);
-
     // tabs
     document.querySelectorAll('.editor-tab-btn').forEach(btn=>{
       btn.addEventListener('click', ()=>{
@@ -1715,7 +1622,6 @@
         document.querySelector(`.editor-panel[data-panel="${btn.dataset.tab}"]`).classList.add('active');
       });
     });
-
     // style swatches
     document.querySelectorAll('.style-card').forEach(sw=>{
       sw.addEventListener('click', ()=>{
@@ -1727,7 +1633,6 @@
         scheduleRestyle(); // re-renders the current real clip with the new caption style, if one exists
       });
     });
-
     // color grading preset swatches — value read at generate/reclip time,
     // and re-applied live to the current real clip via scheduleRestyle()
     let activeColorPreset = 'none';
@@ -1739,24 +1644,175 @@
         scheduleRestyle();
       });
     });
+    // ===== Sound effects — click-to-place timeline =====
+    // Replaces the old single-swatch "one sfx baked in per clip" model:
+    // pick an effect, click anywhere on the current real clip's timeline
+    // to drop it there (as many times, with as many different effects, as
+    // you want), click the armed effect button again to stop placing.
+    // This calls /apply-sound-effects directly (pipeline.py) instead of
+    // going through scheduleRestyle()'s full /reclip render — only the
+    // audio track is touched server-side (video stream is copied, not
+    // re-encoded), so placing effects stays fast no matter how many are
+    // on the timeline.
+    let armedSfx = null;
+    let sfxPlacements = [];
+    let sfxUndoStack = [];
+    let sfxRedoStack = [];
+    let sfxPlaceIdSeq = 0;
+    const sfxTimelineHint = document.getElementById('sfxTimelineHint');
+    const sfxTimelineTrack = document.getElementById('sfxTimelineTrack');
+    const sfxTimelineControls = document.getElementById('sfxTimelineControls');
+    const sfxUndoBtn = document.getElementById('sfxUndoBtn');
+    const sfxRedoBtn = document.getElementById('sfxRedoBtn');
+    const sfxClearBtn = document.getElementById('sfxClearBtn');
+    const sfxApplyStatus = document.getElementById('sfxApplyStatus');
 
-    // sound-effect swatches — separate group, scoped so clicking one
-    // doesn't also clear the color-grading swatches' active state (both
-    // reuse the .cg-swatch class for shared styling)
-    let activeSfx = 'none';
     document.querySelectorAll('#sfxSwatches .cg-swatch').forEach(sw=>{
       sw.addEventListener('click', ()=>{
-        document.querySelectorAll('#sfxSwatches .cg-swatch').forEach(s=>s.classList.remove('active'));
-        sw.classList.add('active');
-        activeSfx = sw.dataset.sfx;
-        scheduleRestyle();
+        const name = sw.dataset.sfx;
+        if(armedSfx === name){
+          // clicking the armed effect again disarms it — stop placing
+          armedSfx = null;
+          sw.classList.remove('active');
+        } else {
+          document.querySelectorAll('#sfxSwatches .cg-swatch').forEach(s=>s.classList.remove('active'));
+          armedSfx = name;
+          sw.classList.add('active');
+        }
       });
     });
-    document.getElementById('sfxPositionSelect').addEventListener('change', scheduleRestyle);
+
+    function sfxClipDuration(){
+      if(currentRealClipIndex > -1 && realClips[currentRealClipIndex]){
+        const c = realClips[currentRealClipIndex];
+        return Math.max(0.1, c.end - c.start);
+      }
+      return DURATION || 1;
+    }
+
+    function renderSfxMarkers(){
+      sfxTimelineTrack.querySelectorAll('.sfx-marker').forEach(m=>m.remove());
+      const dur = sfxClipDuration();
+      sfxPlacements.forEach(p=>{
+        const el = document.createElement('div');
+        el.className = 'sfx-marker';
+        el.style.left = Math.max(0, Math.min(100, p.time/dur*100)) + '%';
+        el.dataset.label = p.effect;
+        el.title = `${p.effect} @ ${p.time.toFixed(1)}s — click to remove`;
+        el.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          pushSfxHistory();
+          sfxPlacements = sfxPlacements.filter(x=>x.id !== p.id);
+          renderSfxMarkers();
+          scheduleSfxApply();
+        });
+        sfxTimelineTrack.appendChild(el);
+      });
+      sfxUndoBtn.disabled = sfxUndoStack.length === 0;
+      sfxRedoBtn.disabled = sfxRedoStack.length === 0;
+    }
+
+    function pushSfxHistory(){
+      sfxUndoStack.push(JSON.parse(JSON.stringify(sfxPlacements)));
+      if(sfxUndoStack.length > 50) sfxUndoStack.shift();
+      sfxRedoStack = [];
+    }
+
+    sfxTimelineTrack.addEventListener('click', (e)=>{
+      if(!armedSfx) return;
+      const rect = sfxTimelineTrack.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const time = pct * sfxClipDuration();
+      pushSfxHistory();
+      sfxPlacements.push({ id: ++sfxPlaceIdSeq, effect: armedSfx, time });
+      renderSfxMarkers();
+      scheduleSfxApply();
+    });
+
+    sfxUndoBtn.addEventListener('click', ()=>{
+      if(!sfxUndoStack.length) return;
+      sfxRedoStack.push(JSON.parse(JSON.stringify(sfxPlacements)));
+      sfxPlacements = sfxUndoStack.pop();
+      renderSfxMarkers();
+      scheduleSfxApply();
+    });
+    sfxRedoBtn.addEventListener('click', ()=>{
+      if(!sfxRedoStack.length) return;
+      sfxUndoStack.push(JSON.parse(JSON.stringify(sfxPlacements)));
+      sfxPlacements = sfxRedoStack.pop();
+      renderSfxMarkers();
+      scheduleSfxApply();
+    });
+    sfxClearBtn.addEventListener('click', ()=>{
+      if(!sfxPlacements.length) return;
+      pushSfxHistory();
+      sfxPlacements = [];
+      renderSfxMarkers();
+      scheduleSfxApply();
+    });
+
+    // Ctrl+Z / Ctrl+Shift+Z (Cmd on Mac) — ignored while typing in a text
+    // field/textarea/contenteditable so it doesn't fight normal
+    // text-editing undo elsewhere on the page (caption text, etc).
+    document.addEventListener('keydown', (e)=>{
+      const tag = (document.activeElement && document.activeElement.tagName) || '';
+      if(tag === 'INPUT' || tag === 'TEXTAREA' || (document.activeElement && document.activeElement.isContentEditable)) return;
+      if(!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') return;
+      e.preventDefault();
+      if(e.shiftKey){ if(!sfxRedoBtn.disabled) sfxRedoBtn.click(); }
+      else { if(!sfxUndoBtn.disabled) sfxUndoBtn.click(); }
+    });
+
+    let sfxApplyTimer = null;
+    function scheduleSfxApply(){
+      if(currentRealClipIndex < 0 || !realClips[currentRealClipIndex]) return; // nothing to apply to yet
+      clearTimeout(sfxApplyTimer);
+      sfxApplyStatus.textContent = sfxPlacements.length ? 'Applying…' : '';
+      sfxApplyTimer = setTimeout(applySfxPlacements, 500);
+    }
+
+    async function applySfxPlacements(){
+      const clip = realClips[currentRealClipIndex];
+      if(!clip) return;
+      try{
+        const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/apply-sound-effects`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(60000),
+          body: JSON.stringify({
+            clip_file: clip.file,
+            placements: sfxPlacements.map(p=>({ effect: p.effect, time: p.time })),
+          }),
+        });
+        if(!res.ok) throw new Error('mix failed');
+        showRealClip(currentRealClipIndex, true);
+        sfxApplyStatus.textContent = sfxPlacements.length ? '✓ Applied' : '';
+      }catch(err){
+        sfxApplyStatus.textContent = "Couldn't apply sound effects — try again.";
+      }
+    }
+
+    // Resets local placement state for whichever clip is now on screen
+    // (each clip has its own independent set of effects) and shows/hides
+    // the timeline depending on whether there's a real clip_file to
+    // target yet.
+    function resetSfxTimelineForClip(){
+      sfxPlacements = [];
+      sfxUndoStack = [];
+      sfxRedoStack = [];
+      armedSfx = null;
+      document.querySelectorAll('#sfxSwatches .cg-swatch').forEach(s=>s.classList.remove('active'));
+      sfxApplyStatus.textContent = '';
+      const hasClip = currentRealClipIndex > -1;
+      sfxTimelineHint.style.display = hasClip ? 'none' : 'block';
+      sfxTimelineTrack.style.display = hasClip ? 'block' : 'none';
+      sfxTimelineControls.style.display = hasClip ? 'flex' : 'none';
+      renderSfxMarkers();
+    }
+
     document.getElementById('zoomPanToggle').addEventListener('change', scheduleRestyle);
     document.getElementById('flashIntroToggle').addEventListener('change', scheduleRestyle);
     document.getElementById('typingSoundToggle').addEventListener('change', scheduleRestyle);
-
     // Reads every effects/audio control and returns the shared option set
     // sent to /process, /process-upload, and /reclip alike — one place to
     // update instead of three whenever a new option is added.
@@ -1766,17 +1822,17 @@
         zoom_pan: document.getElementById('zoomPanToggle').checked,
         flash_intro: document.getElementById('flashIntroToggle').checked,
         color_preset: activeColorPreset,
-        sfx: activeSfx,
-        sfx_position: document.getElementById('sfxPositionSelect').value,
+        // sfx/sfx_position removed — sound effects are now applied after
+        // the fact via the timeline (/apply-sound-effects), not baked in
+        // at generate/reclip time. Backend defaults ("none"/"end") cover
+        // omitting them here.
         typing_sound: document.getElementById('typingSoundToggle').checked,
       };
     }
-
     // switches
     document.querySelectorAll('.switch').forEach(sw=>{
       sw.addEventListener('click', ()=> sw.classList.toggle('on'));
     });
-
     // trim handles
     function pctFromEvent(e){
       const rect = trimTrack.getBoundingClientRect();
@@ -1814,13 +1870,11 @@
     }
     dragHandle(handleLeft, true);
     dragHandle(handleRight, false);
-
     // ===== Paywall =====
     const paywallNotice = document.getElementById('paywallNotice');
     const paywallText = document.getElementById('paywallText');
     function closeEditorPaywall(){ paywallNotice.classList.remove('on'); }
     window.closeEditorPaywall = closeEditorPaywall;
-
     // Returns true if the action is allowed to proceed. Otherwise shows the
     // right prompt (sign in, or upgrade) and returns false.
     // source: 'upload' | 'youtube' — YouTube-link clipping pulls bandwidth
@@ -1857,7 +1911,6 @@
       }
       return true;
     }
-
     // Reports actual usage after a completed render and enforces plan
     // limits server-side (see /api/consume-usage in server.js — this is
     // the same rule checkUsageAllowed applies client-side, just re-checked
@@ -1888,7 +1941,6 @@
       }catch(err){ /* backend unreachable — don't block the render on a metering hiccup */ }
       return true;
     }
-
     // export
     const exportBtn = document.getElementById('exportBtn');
     const exportProgress = document.getElementById('exportProgress');
@@ -1899,13 +1951,11 @@
     // upload, so /reclip (which reuses the same already-downloaded
     // source — see pipeline.py) knows how to meter itself too.
     let currentJobSource = 'upload';
-
     exportBtn.addEventListener('click', async ()=>{
       // Re-downloading an already-generated real clip doesn't cost anything
       // new (usage was already recorded when it was generated) — this gate
       // really only matters for the demo-fallback simulated render below.
       if(!checkUsageAllowed('upload')) return;
-
       // Real clip already exists on disk from the pipeline — just download it,
       // no need to fake a render.
       if(currentRealClipIndex > -1 && realClips[currentRealClipIndex]){
@@ -1920,7 +1970,6 @@
         exportDone.classList.add('on');
         return;
       }
-
       exportDone.classList.remove('on');
       exportProgress.classList.add('on');
       exportFill.style.width = '0%';
@@ -1932,7 +1981,6 @@
           p = 100;
           clearInterval(t);
           exportBtn.disabled = false;
-
           // Demo mode never touches the proxy (it's a local fallback
           // simulation), so it's metered like an upload — 0 proxy MB.
           const allowed = await consumeUsageForClips('upload', 0);
@@ -1952,7 +2000,6 @@
         exportFill.style.width = p+'%';
       }, 120);
     });
-
     // ===== Real pipeline + demo fallback =====
     const realClipVideo = document.getElementById('realClipVideo');
     const clipSwitcher = document.getElementById('clipSwitcher');
@@ -1965,7 +2012,6 @@
     const regenVoiceoverBtn = document.getElementById('regenVoiceoverBtn');
     let realClips = [];
     let currentJobId = null;
-
     function enterDemoMode(){
       currentRealClipIndex = -1;
       modeBadge.style.display = 'none';
@@ -1976,8 +2022,8 @@
       capOverlay.setAttribute('contenteditable', 'true');
       clipSwitcher.style.display = 'none';
       exportBtn.textContent = 'Export 1080p, no watermark';
+      resetSfxTimelineForClip();
     }
-
     function showRealClip(index, cacheBust){
       const clip = realClips[index];
       if(!clip) return;
@@ -1989,11 +2035,9 @@
       capOverlay.style.display = 'none';
       timeTotal.textContent = fmt(clip.end - clip.start);
       clipSwitcher.querySelectorAll('.clip-pill').forEach((p,i)=> p.classList.toggle('active', i===index));
-
       exportDone.classList.remove('on');
       exportProgress.classList.remove('on');
       exportBtn.textContent = 'Download clip.mp4';
-
       // Voice-over tab only makes sense (and only appears) for clips that
       // actually got AI narration — most real clips have their own speech
       // and never go through that pipeline at all.
@@ -2008,19 +2052,17 @@
         }
       }
     }
-
     function refreshClipPills(){
       clipSwitcher.innerHTML = '';
       realClips.forEach((c,i)=>{
         const pill = document.createElement('button');
         pill.className = 'clip-pill';
         pill.textContent = `Clip ${i+1} · ${fmt(c.start)}–${fmt(c.end)}`;
-        pill.addEventListener('click', ()=> showRealClip(i));
+        pill.addEventListener('click', ()=> { showRealClip(i); resetSfxTimelineForClip(); });
         clipSwitcher.appendChild(pill);
       });
       clipSwitcher.style.display = 'flex';
     }
-
     function enterRealMode(clips, jobId){
       realClips = clips;
       currentJobId = jobId || null;
@@ -2028,11 +2070,10 @@
       refreshClipPills();
       reclipBtn.style.display = currentJobId ? 'block' : 'none';
       showRealClip(0);
-
+      resetSfxTimelineForClip();
       // captions/style/music tabs don't apply to a finished, already-rendered
       // real clip — point people at the export tab instead.
       captionList.innerHTML = '<div style="color:var(--iron);font-size:13.5px;">Captions are already burned into this real clip. Generate again for a different cut.</div>';
-
       // If music was picked before this (the first) generate finished,
       // there was no job yet to upload it to — send it now and restyle
       // the clip on screen so it's actually mixed in.
@@ -2040,7 +2081,6 @@
         uploadMusicIfNeeded().then(scheduleRestyle);
       }
     }
-
     reclipBtn.addEventListener('click', async ()=>{
       if(!currentJobId || currentRealClipIndex < 0) return;
       // Reclip reuses the video already downloaded for this job (no new
@@ -2049,7 +2089,6 @@
       // plans to begin with, so this mainly matters for upload-sourced
       // jobs re-checking the free-tries balance.
       if(!checkUsageAllowed(currentJobSource)) return;
-
       reclipBtn.disabled = true;
       reclipBtn.textContent = 'Finding a different moment…';
       try{
@@ -2058,7 +2097,6 @@
         const voiceover = document.getElementById('voiceoverToggle').checked;
         const voiceoverVoice = document.getElementById('voiceoverVoiceSelect').value;
         const excludeStarts = realClips.map(c=>c.start);
-
         const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/reclip`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2081,6 +2119,7 @@
         realClips[currentRealClipIndex] = newClip;
         refreshClipPills();
         showRealClip(currentRealClipIndex, true);
+        resetSfxTimelineForClip();
       }catch(err){
         paywallText.textContent = `Couldn't get a different moment: ${err.message}`;
         paywallNotice.classList.add('on');
@@ -2089,11 +2128,10 @@
         reclipBtn.textContent = '↻ Try a different moment';
       }
     });
-
     // Re-applies the current style/effects/music selections to whichever
     // real clip is on screen, re-rendering the SAME moment (not a new
     // one) via /reclip's optional explicit `start` param. Without this,
-    // clicking a caption-style/color-grade/sfx swatch or a motion toggle
+    // clicking a caption-style/color-grade swatch or a motion toggle
     // after a clip already exists silently did nothing — those controls
     // only got read at the NEXT full generate/reclip, which for most
     // people never happened, making the whole style panel feel broken.
@@ -2105,11 +2143,9 @@
       clearTimeout(restyleTimer);
       restyleTimer = setTimeout(applyRestyle, 700);
     }
-
     async function applyRestyle(){
       if(!currentJobId || currentRealClipIndex < 0) return;
       if(!checkUsageAllowed(currentJobSource)) return;
-
       const clip = realClips[currentRealClipIndex];
       status.classList.add('on');
       statusText.textContent = 'Applying style…';
@@ -2117,7 +2153,6 @@
         const clipSeconds = parseInt(document.getElementById('clipSecondsSelect').value, 10);
         const voiceover = document.getElementById('voiceoverToggle').checked;
         const voiceoverVoice = document.getElementById('voiceoverVoiceSelect').value;
-
         const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/reclip`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2140,6 +2175,7 @@
         realClips[currentRealClipIndex] = newClip;
         refreshClipPills();
         showRealClip(currentRealClipIndex, true);
+        resetSfxTimelineForClip();
       }catch(err){
         paywallText.textContent = `Couldn't apply that change: ${err.message}`;
         paywallNotice.classList.add('on');
@@ -2147,14 +2183,12 @@
         status.classList.remove('on');
       }
     }
-
     regenVoiceoverBtn.addEventListener('click', async ()=>{
       if(!currentJobId || currentRealClipIndex < 0) return;
       const clip = realClips[currentRealClipIndex];
       if(!clip) return;
       const script = voiceoverScriptEl.value.trim();
       if(!script){ voiceoverScriptEl.focus(); return; }
-
       regenVoiceoverBtn.disabled = true;
       voiceoverStatus.classList.add('on');
       voiceoverStatusText.textContent = 'Synthesizing new voice…';
@@ -2173,6 +2207,13 @@
         const updated = await res.json();
         realClips[currentRealClipIndex] = { ...clip, ...updated };
         showRealClip(currentRealClipIndex, true);
+        // Regenerating narration replaces the clip's audio track server-
+        // side (see /regenerate-voiceover in pipeline.py, which also
+        // invalidates the cached "clean" baseline /apply-sound-effects
+        // mixes from) — any sound effects placed before this point no
+        // longer reflect what's actually in the file, so clear them here
+        // too rather than leave stale markers on screen.
+        resetSfxTimelineForClip();
       }catch(err){
         paywallText.textContent = `Voice-over error: ${err.message}`;
         paywallNotice.classList.add('on');
@@ -2181,7 +2222,6 @@
         voiceoverStatus.classList.remove('on');
       }
     });
-
     async function tryRealPipeline(url){
       // Reachability check first. Railway's free tier lets services go
       // cold when idle, so the first request after a quiet spell can take
@@ -2194,14 +2234,12 @@
       }catch(err){
         throw new Error(friendlyPipelineError(err));
       }
-
       const clipCount = parseInt(document.getElementById('clipCountSelect').value, 10);
       const clipSeconds = parseInt(document.getElementById('clipSecondsSelect').value, 10);
       const instructionEl = document.getElementById('editorInstruction');
       const instruction = instructionEl ? instructionEl.value.trim() : '';
       const voiceover = document.getElementById('voiceoverToggle').checked;
       const voiceoverVoice = document.getElementById('voiceoverVoiceSelect').value;
-
       statusText.textContent = 'Downloading video…';
       const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/process`, {
         method: 'POST',
@@ -2214,7 +2252,6 @@
         })
       });
       statusText.textContent = 'Transcribing and cutting…';
-
       if(!res.ok){
         // FastAPI's HTTPException responses come back as {"detail": "..."},
         // not {"error": "..."} — reading the wrong field here would silently
@@ -2225,7 +2262,6 @@
       const data = await res.json();
       return data;
     }
-
     // Translates a raw fetch()/browser error into something a user can
     // actually act on. "Failed to fetch" specifically is the browser's
     // generic network-level error (DNS, connection refused, offline, a
@@ -2240,7 +2276,6 @@
       }
       return err.message || 'Could not reach the AI pipeline.';
     }
-
     // One retry, a few seconds apart, before giving up — smooths over the
     // exact case that bit us in testing: a request landing in the ~30s
     // window while a fresh Railway deploy is swapping containers.
@@ -2258,7 +2293,6 @@
         }
       }
     }
-
     async function tryRealPipelineUpload(file){
       // Same reachability check as the URL path — a cold Railway container
       // needs real time to wake up, not a short timeout that silently
@@ -2269,14 +2303,12 @@
       }catch(err){
         throw new Error(friendlyPipelineError(err));
       }
-
       const clipCount = parseInt(document.getElementById('clipCountSelect').value, 10);
       const clipSeconds = parseInt(document.getElementById('clipSecondsSelect').value, 10);
       const instructionEl = document.getElementById('editorInstruction');
       const instruction = instructionEl ? instructionEl.value.trim() : '';
       const voiceover = document.getElementById('voiceoverToggle').checked;
       const voiceoverVoice = document.getElementById('voiceoverVoiceSelect').value;
-
       const formData = new FormData();
       formData.append('file', file);
       formData.append('clip_count', clipCount);
@@ -2285,7 +2317,6 @@
       formData.append('voiceover', voiceover);
       formData.append('voiceover_voice', voiceoverVoice);
       Object.entries(collectClipOptions()).forEach(([k, v]) => formData.append(k, v));
-
       statusText.textContent = 'Uploading video…';
       const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/process-upload`, {
         method: 'POST',
@@ -2293,7 +2324,6 @@
         body: formData,
       });
       statusText.textContent = 'Transcribing and cutting…';
-
       if(!res.ok){
         const err = await res.json().catch(()=>({detail:'Unknown error'}));
         throw new Error(err.detail || 'Pipeline request failed');
@@ -2301,28 +2331,23 @@
       const data = await res.json();
       return data;
     }
-
     // generate flow
     form.addEventListener('submit', async (e)=>{
       e.preventDefault();
-
       const url = input.value.trim();
       // A YouTube link pulls bandwidth through the paid proxy — paid
       // plans only. An upload never touches the proxy — free-eligible.
       const source = selectedFile ? 'upload' : 'youtube';
       if(!checkUsageAllowed(source)) return;
       currentJobSource = source;
-
       genBtn.disabled = true;
       status.classList.add('on');
       statusText.textContent = 'Contacting AI pipeline…';
-
       try{
         const data = selectedFile ? await tryRealPipelineUpload(selectedFile)
                     : url ? await tryRealPipeline(url)
                     : null;
         const clips = data ? data.clips : null;
-
         if(clips && clips.length){
           status.classList.remove('on');
           genBtn.disabled = false;
@@ -2345,11 +2370,9 @@
         paywallNotice.classList.add('on');
         return;
       }
-
       // Fallback: local pipeline not reachable (or no link pasted) — run the demo.
       runDemoGeneration();
     });
-
     function runDemoGeneration(){
       const demoSteps = ['Transcribing audio…','Finding the best moments…','Reframing to 9:16…','Burning in captions…'];
       genBtn.disabled = true;
@@ -2374,16 +2397,13 @@
         }
       }, 550);
     }
-
     updateTrimVisual();
   })();
-
   // ===== Mobile menu =====
   const menuBtn = document.getElementById('menuBtn');
   const navLinks = document.getElementById('navLinks');
   menuBtn.addEventListener('click', ()=> navLinks.classList.toggle('mobile-open'));
   navLinks.querySelectorAll('a').forEach(a=> a.addEventListener('click', ()=> navLinks.classList.remove('mobile-open')));
-
   // ===== Auth modal =====
   const authModal = document.getElementById('authModal');
   function openAuthModal(tab){
@@ -2397,9 +2417,7 @@
     document.querySelectorAll('.modal-tab-btn').forEach(b=> b.classList.toggle('active', b.dataset.modalTab===tab));
     document.querySelectorAll('.modal-panel').forEach(p=> p.classList.toggle('active', p.dataset.modalPanel===tab));
   }
-
   let currentUser = null;
-
   // Shows the "Paid plans only" badge next to the URL field for anyone
   // not signed in or still on the free plan — matches what
   // checkUsageAllowed('youtube') actually enforces, just surfaced before
@@ -2408,7 +2426,6 @@
     const badge = document.getElementById('urlPaidBadge');
     if(badge) badge.style.display = (!currentUser || currentUser.plan === 'free') ? 'inline-block' : 'none';
   }
-
   async function checkSession(){
     if(!getToken()){ updateUrlPaidBadge(); return; } // never signed in on this browser — skip the call
     try{
@@ -2424,7 +2441,6 @@
     updateUrlPaidBadge();
   }
   checkSession();
-
   document.getElementById('signupForm').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const email = document.getElementById('signupEmail').value;
@@ -2446,7 +2462,6 @@
       errEl.classList.add('on');
     }
   });
-
   document.getElementById('loginForm').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const email = document.getElementById('loginEmail').value;
@@ -2468,14 +2483,12 @@
       errEl.classList.add('on');
     }
   });
-
   // ===== Stripe checkout =====
   async function startCheckout(plan, clicked){
     const billing = btnY.classList.contains('active') ? 'yearly' : 'monthly';
     const originalText = clicked.textContent;
     clicked.textContent = 'Redirecting…';
     clicked.style.pointerEvents = 'none';
-
     try{
       const res = await fetch(`${BACKEND_URL}/api/create-checkout-session`, {
         method: 'POST',
@@ -2497,6 +2510,5 @@
     }
   }
 </script>
-
 </body>
 </html>
