@@ -428,6 +428,18 @@
     font-size:11.5px;font-weight:600;color:var(--iron);background:var(--void);
   }
   .cg-swatch.active{border-color:var(--ember);color:var(--paper);background:var(--panel-2);}
+  /* Paid-plan-only options — dimmed with a small PRO badge for free-plan
+     users; clicking one opens the upgrade prompt instead of applying it
+     (see updatePremiumLocks() / the guarded click handlers). Un-dims
+     automatically the moment currentUser.plan isn't 'free'. */
+  [data-premium="1"]{position:relative;}
+  [data-premium="1"].locked{opacity:0.45;}
+  [data-premium="1"].locked::after{
+    content:'PRO';position:absolute;top:3px;right:3px;font-size:8px;font-weight:800;
+    letter-spacing:0.04em;color:#1e1f22;background:var(--ember);border-radius:3px;padding:1px 4px;
+    pointer-events:none;
+  }
+  .style-card[data-premium="1"].locked::after{top:6px;right:6px;}
   .zoom-toggle-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--iron);cursor:pointer;margin-bottom:16px;}
   .zoom-toggle-row input{width:auto;accent-color:var(--ember);}
   .editor-status{
@@ -466,6 +478,12 @@
   @media(prefers-reduced-motion:reduce){.cap-overlay.style-karaoke{animation:none;--k:50%;}}
   .cap-overlay.style-meme{color:#fff;-webkit-text-stroke:1.5px #000;font-size:16px;}
   .cap-overlay.style-minimal{color:var(--paper);font-family:var(--font-body);text-transform:none;font-weight:600;font-size:13px;letter-spacing:0;background:rgba(0,0,0,0.35);border-radius:3px;padding:5px 8px;}
+  /* Paid-plan-only caption styles (see PREMIUM_CAPTION_STYLES in pipeline.py) */
+  .cap-overlay.style-neon{color:#ff00ff;text-shadow:0 0 6px #ff00ff,0 0 12px #ffff00;font-size:15px;}
+  .cap-overlay.style-royal{color:#ffd700;text-shadow:0 2px 6px rgba(0,0,0,0.7);font-size:15px;letter-spacing:0.02em;}
+  .cap-overlay.style-typewriter{color:#fff;font-family:var(--font-mono);background:rgba(0,0,0,0.5);border-radius:2px;padding:5px 8px;font-size:13px;}
+  .cap-overlay.style-shadow{color:#fff;text-shadow:0 4px 10px rgba(0,0,0,0.95),0 1px 0 rgba(0,0,0,0.6);font-size:15px;}
+  .cap-overlay.style-impact{color:#fff;-webkit-text-stroke:2px #00e0ff;font-size:17px;font-weight:800;}
   .reposition-toggle-btn{
     position:absolute;top:8px;right:8px;z-index:6;background:rgba(0,0,0,0.55);
     border:1px solid rgba(255,255,255,0.35);border-radius:5px;color:var(--paper);
@@ -1101,6 +1119,26 @@
                   <div class="style-card-preview"><span class="cap-overlay style-minimal">SAMPLE</span></div>
                   <div class="style-card-label">Minimal</div>
                 </button>
+                <button class="style-card" data-style="style-neon" data-premium="1">
+                  <div class="style-card-preview"><span class="cap-overlay style-neon">SAMPLE</span></div>
+                  <div class="style-card-label">Neon</div>
+                </button>
+                <button class="style-card" data-style="style-royal" data-premium="1">
+                  <div class="style-card-preview"><span class="cap-overlay style-royal">SAMPLE</span></div>
+                  <div class="style-card-label">Royal Gold</div>
+                </button>
+                <button class="style-card" data-style="style-typewriter" data-premium="1">
+                  <div class="style-card-preview"><span class="cap-overlay style-typewriter">SAMPLE</span></div>
+                  <div class="style-card-label">Typewriter</div>
+                </button>
+                <button class="style-card" data-style="style-shadow" data-premium="1">
+                  <div class="style-card-preview"><span class="cap-overlay style-shadow">SAMPLE</span></div>
+                  <div class="style-card-label">Drop Shadow</div>
+                </button>
+                <button class="style-card" data-style="style-impact" data-premium="1">
+                  <div class="style-card-preview"><span class="cap-overlay style-impact">SAMPLE</span></div>
+                  <div class="style-card-label">Impact</div>
+                </button>
               </div>
             </div>
             <div class="effects-section">
@@ -1123,6 +1161,11 @@
                 <button class="cg-swatch" data-preset="vibrant">Vibrant</button>
                 <button class="cg-swatch" data-preset="bw">B&amp;W</button>
                 <button class="cg-swatch" data-preset="cinematic">Cinematic</button>
+                <button class="cg-swatch" data-preset="teal_orange" data-premium="1">Teal &amp; Orange</button>
+                <button class="cg-swatch" data-preset="vintage" data-premium="1">Vintage</button>
+                <button class="cg-swatch" data-preset="noir" data-premium="1">Noir</button>
+                <button class="cg-swatch" data-preset="pastel" data-premium="1">Pastel</button>
+                <button class="cg-swatch" data-preset="dreamy" data-premium="1">Dreamy</button>
               </div>
             </div>
             <div class="effects-section">
@@ -1860,9 +1903,28 @@
         document.querySelector(`.editor-panel[data-panel="${btn.dataset.tab}"]`).classList.add('active');
       });
     });
+    // Paid-plan-only styles/presets (see data-premium="1" markers above) —
+    // dimmed with a PRO badge and click-blocked for anyone not on a paid
+    // plan. The pipeline itself doesn't enforce this (it'll happily render
+    // any style key it's sent, same as sound effects/gameplay bg aren't
+    // server-gated either) — this mirrors the existing pattern where
+    // YouTube-link access is the one thing actually enforced server-side
+    // (it's the one thing that costs real proxy bandwidth); cosmetic
+    // render options are gated at the UI layer only.
+    function updatePremiumLocks(){
+      const isPaid = !!(currentUser && currentUser.plan !== 'free');
+      document.querySelectorAll('[data-premium="1"]').forEach(el=>{
+        el.classList.toggle('locked', !isPaid);
+      });
+    }
+    function showPremiumPaywall(){
+      paywallText.textContent = "That's a paid-plan feature — subscribe to unlock the extra caption styles and color grading looks.";
+      paywallNotice.classList.add('on');
+    }
     // style swatches
     document.querySelectorAll('.style-card').forEach(sw=>{
       sw.addEventListener('click', ()=>{
+        if(sw.classList.contains('locked')){ showPremiumPaywall(); return; }
         document.querySelectorAll('.style-card').forEach(s=>s.classList.remove('active'));
         sw.classList.add('active');
         capOverlay.classList.remove(activeStyle);
@@ -1876,12 +1938,21 @@
     let activeColorPreset = 'none';
     document.querySelectorAll('#colorGradeSwatches .cg-swatch').forEach(sw=>{
       sw.addEventListener('click', ()=>{
+        if(sw.classList.contains('locked')){ showPremiumPaywall(); return; }
         document.querySelectorAll('#colorGradeSwatches .cg-swatch').forEach(s=>s.classList.remove('active'));
         sw.classList.add('active');
         activeColorPreset = sw.dataset.preset;
         scheduleRestyle();
       });
     });
+    // NOTE: updatePremiumLocks() isn't called here — `currentUser` is
+    // declared further down in this script (with `let`, not yet
+    // initialized at this point), so calling it this early would throw.
+    // It's invoked from checkSession() and consumeUsageForClips() instead,
+    // both of which only run after the whole script has finished its
+    // first pass. The CSS default (no .locked class) briefly shows
+    // premium options un-dimmed until checkSession() resolves, which is
+    // effectively instant on page load.
     // ===== Sound effects — click-to-place timeline =====
     // Replaces the old single-swatch "one sfx baked in per clip" model:
     // pick an effect, click anywhere on the current real clip's timeline
@@ -2316,6 +2387,7 @@
         if(res.ok){
           currentUser = await res.json();
           if(typeof updateUrlPaidBadge === 'function') updateUrlPaidBadge();
+          if(typeof updatePremiumLocks === 'function') updatePremiumLocks();
         }
       }catch(err){ /* backend unreachable — don't block the render on a metering hiccup */ }
       return true;
@@ -2828,7 +2900,7 @@
     }
   }
   async function checkSession(){
-    if(!getToken()){ updateUrlPaidBadge(); return; } // never signed in on this browser — skip the call
+    if(!getToken()){ updateUrlPaidBadge(); if(typeof updatePremiumLocks === 'function') updatePremiumLocks(); return; } // never signed in on this browser — skip the call
     try{
       const res = await fetch(`${BACKEND_URL}/api/me`, { headers: authHeaders() });
       if(res.ok){
@@ -2840,6 +2912,7 @@
       }
     }catch(err){ /* backend not running yet — fine, stays signed out */ }
     updateUrlPaidBadge();
+    if(typeof updatePremiumLocks === 'function') updatePremiumLocks();
   }
   checkSession();
   document.getElementById('signupForm').addEventListener('submit', async (e)=>{
