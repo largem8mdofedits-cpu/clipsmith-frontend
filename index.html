@@ -1108,6 +1108,21 @@
                 Typing-keyboard sound bed under the whole clip
               </label>
             </div>
+            <div class="effects-section">
+              <div class="effects-label">Background gameplay (split-screen)</div>
+              <div style="font-size:12.5px;color:var(--iron);margin-bottom:10px;">Upload your own gameplay clip (Subway Surfers, an obby, whatever) — it plays muted on the bottom half, with the real clip on top. A common trick to look less templated. This app doesn't provide or fetch any gameplay footage — it's whatever you upload. Not applied to every clip automatically — toggle it per clip below.</div>
+              <button type="button" class="upload-btn" id="gameplayBgUploadTriggerBtn">⤒ Upload gameplay clip</button>
+              <input type="file" id="gameplayBgFileInput" accept="video/*" style="display:none;">
+              <div class="upload-filename" id="gameplayBgUploadFilename">
+                <span id="gameplayBgUploadFilenameText"></span>
+                <button type="button" class="clear-upload" id="clearGameplayBgBtn">remove</button>
+              </div>
+              <label class="zoom-toggle-row" style="margin-top:12px;margin-bottom:0;">
+                <input type="checkbox" id="gameplayBgToggle" disabled>
+                Split-screen THIS clip with the uploaded gameplay background
+              </label>
+              <div class="editor-status" id="gameplayBgStatus" style="margin-top:8px;"><span class="spin"></span><span id="gameplayBgStatusText">Compositing…</span></div>
+            </div>
           </div>
           <div class="editor-panel" data-panel="music">
             <div style="font-size:12.5px;color:var(--iron);margin-bottom:10px;">Upload an audio file — it'll be mixed in as low-volume background music under the clip's audio.</div>
@@ -1537,6 +1552,118 @@
         scheduleRestyle();
       }
     });
+    // ===== Background gameplay (split-screen) =====
+    // Same one-file-per-job upload pattern as background music above,
+    // but the on/off toggle is per-CLIP (via /apply-gameplay-bg, a fast
+    // composite pass — not a full /reclip render), since you'd want this
+    // on some clips and not others, not baked into the whole job.
+    const gameplayBgUploadTriggerBtn = document.getElementById('gameplayBgUploadTriggerBtn');
+    const gameplayBgFileInput = document.getElementById('gameplayBgFileInput');
+    const gameplayBgUploadFilename = document.getElementById('gameplayBgUploadFilename');
+    const gameplayBgUploadFilenameText = document.getElementById('gameplayBgUploadFilenameText');
+    const clearGameplayBgBtn = document.getElementById('clearGameplayBgBtn');
+    const gameplayBgToggle = document.getElementById('gameplayBgToggle');
+    const gameplayBgStatus = document.getElementById('gameplayBgStatus');
+    const gameplayBgStatusText = document.getElementById('gameplayBgStatusText');
+    let selectedGameplayBgFile = null;
+    // Job-level: has this specific job's background actually been
+    // confirmed uploaded to the server yet? (Not the same as "has the
+    // user picked a file" — selectedGameplayBgFile persists across a new
+    // generate so it auto-re-uploads, same as background music does, but
+    // this flag resets to false the moment a new job starts.)
+    let gameplayBgUploaded = false;
+
+    function updateGameplayBgToggleAvailability(){
+      gameplayBgToggle.disabled = !(gameplayBgUploaded && currentRealClipIndex > -1);
+    }
+
+    async function uploadGameplayBgIfNeeded(){
+      if(!selectedGameplayBgFile || !currentJobId) return;
+      const fd = new FormData();
+      fd.append('job_id', currentJobId);
+      fd.append('file', selectedGameplayBgFile);
+      try{
+        const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/upload-gameplay-bg`, {
+          method: 'POST', body: fd, signal: AbortSignal.timeout(120000),
+        });
+        if(!res.ok){
+          const err = await res.json().catch(()=>({detail:'Unknown error'}));
+          throw new Error(err.detail || 'Could not upload gameplay clip');
+        }
+        gameplayBgUploaded = true;
+        updateGameplayBgToggleAvailability();
+      }catch(err){
+        console.warn('Clipsmith: gameplay background upload failed.', err);
+        paywallText.textContent = `Couldn't upload that gameplay clip: ${err.message}`;
+        paywallNotice.classList.add('on');
+      }
+    }
+    gameplayBgUploadTriggerBtn.addEventListener('click', ()=> gameplayBgFileInput.click());
+    gameplayBgFileInput.addEventListener('change', async ()=>{
+      const f = gameplayBgFileInput.files && gameplayBgFileInput.files[0];
+      if(!f) return;
+      selectedGameplayBgFile = f;
+      gameplayBgUploadTriggerBtn.classList.add('has-file');
+      gameplayBgUploadTriggerBtn.textContent = '⤒ Change gameplay clip';
+      gameplayBgUploadFilenameText.textContent = f.name;
+      gameplayBgUploadFilename.classList.add('on');
+      if(currentJobId){
+        await uploadGameplayBgIfNeeded();
+      }
+    });
+    clearGameplayBgBtn.addEventListener('click', async ()=>{
+      selectedGameplayBgFile = null;
+      gameplayBgFileInput.value = '';
+      gameplayBgUploadTriggerBtn.classList.remove('has-file');
+      gameplayBgUploadTriggerBtn.textContent = '⤒ Upload gameplay clip';
+      gameplayBgUploadFilename.classList.remove('on');
+      gameplayBgUploaded = false;
+      if(gameplayBgToggle.checked && currentRealClipIndex > -1){
+        gameplayBgToggle.checked = false;
+        await applyGameplayBgToggle(false); // turn it off on the clip currently on screen too
+      }
+      updateGameplayBgToggleAvailability();
+      if(currentJobId){
+        try{
+          const fd = new FormData();
+          fd.append('job_id', currentJobId);
+          await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/remove-gameplay-bg`, {
+            method: 'POST', body: fd, signal: AbortSignal.timeout(30000),
+          });
+        }catch(err){
+          console.warn('Clipsmith: could not remove gameplay background.', err);
+        }
+      }
+    });
+    async function applyGameplayBgToggle(enabled){
+      const clip = realClips[currentRealClipIndex];
+      if(!clip) return;
+      gameplayBgStatus.classList.add('on');
+      gameplayBgStatusText.textContent = enabled ? 'Compositing gameplay background…' : 'Removing gameplay background…';
+      try{
+        const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/apply-gameplay-bg`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(90000),
+          body: JSON.stringify({ clip_file: clip.file, enabled }),
+        });
+        if(!res.ok){
+          const err = await res.json().catch(()=>({detail:'Unknown error'}));
+          throw new Error(err.detail || 'Could not update the gameplay background');
+        }
+        showRealClip(currentRealClipIndex, true);
+      }catch(err){
+        gameplayBgToggle.checked = !enabled; // request failed — put the checkbox back
+        paywallText.textContent = `Gameplay background error: ${err.message}`;
+        paywallNotice.classList.add('on');
+      }finally{
+        gameplayBgStatus.classList.remove('on');
+      }
+    }
+    gameplayBgToggle.addEventListener('change', ()=>{
+      if(currentRealClipIndex < 0) return;
+      applyGameplayBgToggle(gameplayBgToggle.checked);
+    });
     const capOverlay = document.getElementById('capOverlay');
     const playBtn = document.getElementById('playBtn');
     const miniFill = document.getElementById('miniFill');
@@ -1868,6 +1995,11 @@
       sfxTimeReadout.style.display = 'none';
       renderSfxMarkers();
       if(hasClip) renderSfxTimeTicks();
+      // Gameplay split-screen is also a per-clip toggle (see
+      // applyGameplayBgToggle) — reset it here too rather than duplicate
+      // this same set of call sites a second time.
+      gameplayBgToggle.checked = false;
+      updateGameplayBgToggleAvailability();
     }
 
     document.getElementById('zoomPanToggle').addEventListener('change', scheduleRestyle);
@@ -2082,6 +2214,7 @@
       capOverlay.setAttribute('contenteditable', 'true');
       clipSwitcher.style.display = 'none';
       exportBtn.textContent = 'Export 1080p, no watermark';
+      gameplayBgUploaded = false; // demo mode has no real job/job_dir behind it
       resetSfxTimelineForClip();
     }
     function showRealClip(index, cacheBust){
@@ -2130,6 +2263,13 @@
       refreshClipPills();
       reclipBtn.style.display = currentJobId ? 'block' : 'none';
       showRealClip(0);
+      // A new job has its own job_dir with no gameplay background
+      // uploaded yet, even if one was uploaded for a previous job — reset
+      // the confirmed-uploaded flag, then re-upload the same picked file
+      // if there is one (mirrors the background-music behavior below:
+      // once you've picked a file, it carries over to new generates
+      // automatically instead of making you re-pick it every time).
+      gameplayBgUploaded = false;
       resetSfxTimelineForClip();
       // captions/style/music tabs don't apply to a finished, already-rendered
       // real clip — point people at the export tab instead.
@@ -2139,6 +2279,9 @@
       // the clip on screen so it's actually mixed in.
       if(selectedMusicFile && currentJobId){
         uploadMusicIfNeeded().then(scheduleRestyle);
+      }
+      if(selectedGameplayBgFile && currentJobId){
+        uploadGameplayBgIfNeeded();
       }
     }
     reclipBtn.addEventListener('click', async ()=>{
