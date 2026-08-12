@@ -2356,6 +2356,55 @@
     // (served by pipeline.py's /source-preview/{job_id}) so the facecam is
     // actually visible, then switch back to the freshly re-rendered clip
     // once the box is confirmed.
+    // object-fit:contain shows the WHOLE source frame without cropping,
+    // but when the source's aspect ratio doesn't match the phone-shaped
+    // preview box, the browser letterboxes it INSIDE the video element —
+    // the actual pixels only occupy a smaller centered strip, with black
+    // bars filling the rest of the element's own box. facecamOverlay's
+    // drag math needs to be measured against that real visible strip, not
+    // the full element — otherwise a box dragged over what LOOKS like the
+    // facecam on screen maps to a totally different region of the actual
+    // source pixels (this was the root cause of a crop landing on the
+    // wrong part of the frame entirely). Resizing/repositioning the
+    // overlay itself to exactly match the visible strip means all the
+    // existing percentage-based box math above stays correct unchanged —
+    // it's just now measuring against the right rectangle.
+    function syncFacecamOverlayToVideoContent(){
+      if(!realClipVideo.videoWidth || !realClipVideo.videoHeight) return;
+      const containerRect = document.getElementById('editorPhone').getBoundingClientRect();
+      const videoAspect = realClipVideo.videoWidth / realClipVideo.videoHeight;
+      const containerAspect = containerRect.width / containerRect.height;
+      let dispW, dispH, offX, offY;
+      if(videoAspect > containerAspect){
+        // source is relatively wider than the container — width-constrained,
+        // letterboxed (black bars) top/bottom
+        dispW = containerRect.width;
+        dispH = dispW / videoAspect;
+        offX = 0;
+        offY = (containerRect.height - dispH) / 2;
+      }else{
+        // height-constrained — pillarboxed (black bars) left/right
+        dispH = containerRect.height;
+        dispW = dispH * videoAspect;
+        offY = 0;
+        offX = (containerRect.width - dispW) / 2;
+      }
+      facecamOverlay.style.left = offX + 'px';
+      facecamOverlay.style.top = offY + 'px';
+      facecamOverlay.style.width = dispW + 'px';
+      facecamOverlay.style.height = dispH + 'px';
+      renderFacecamBox();
+    }
+    function resetFacecamOverlayGeometry(){
+      // Back to filling the whole preview — matches the rendered clip
+      // (object-fit:cover), which always fills edge-to-edge with no
+      // letterboxing, so the overlay's full bounding rect IS the video
+      // content rect in that mode.
+      facecamOverlay.style.left = '';
+      facecamOverlay.style.top = '';
+      facecamOverlay.style.width = '';
+      facecamOverlay.style.height = '';
+    }
     function showSourcePreviewForFacecam(){
       if(!currentJobId) return;
       realClipVideo.style.objectFit = 'contain'; // show the FULL frame, not cropped/zoomed
@@ -2366,12 +2415,16 @@
       const onLoaded = ()=>{
         realClipVideo.currentTime = seekTo;
         realClipVideo.pause();
+        syncFacecamOverlayToVideoContent();
         realClipVideo.removeEventListener('loadedmetadata', onLoaded);
       };
       realClipVideo.addEventListener('loadedmetadata', onLoaded);
+      window.addEventListener('resize', syncFacecamOverlayToVideoContent);
     }
     function restoreRenderedPreview(){
       realClipVideo.style.objectFit = 'cover';
+      resetFacecamOverlayGeometry();
+      window.removeEventListener('resize', syncFacecamOverlayToVideoContent);
       showRealClip(currentRealClipIndex, true);
     }
     // Small ▲/▼ buttons that appear once a facecam crop is confirmed —
