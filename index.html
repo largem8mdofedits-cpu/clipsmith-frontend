@@ -558,18 +558,50 @@
      anywhere; the server-side overlay math clamps the position so it can
      never hang off the edge of the frame regardless of what's sent. */
   .pip-position-overlay{
-    position:absolute;inset:0;z-index:6;display:none;
+    position:absolute;inset:0;z-index:6;display:none;pointer-events:none;
   }
   .pip-position-handle{
     position:absolute;border:2px solid var(--ember);border-radius:8px;
     background:rgba(255,255,255,0.10);cursor:grab;touch-action:none;
-    box-shadow:0 2px 12px rgba(0,0,0,0.45);
+    box-shadow:0 2px 12px rgba(0,0,0,0.45);pointer-events:auto;
   }
   .pip-position-handle.dragging{cursor:grabbing;background:rgba(255,255,255,0.22);}
   .pip-position-hint{
     position:absolute;top:8px;left:8px;right:8px;font-size:10.5px;color:var(--paper);
     background:rgba(0,0,0,0.55);border-radius:4px;padding:4px 7px;pointer-events:none;text-align:center;
   }
+  /* Small scale (size) slider that rides along inside a position overlay,
+     bottom-center, so resizing a bubble/pin happens right next to where
+     you're already dragging it instead of scrolling back to the panel. */
+  .pin-scale-control{
+    position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+    width:70%;max-width:180px;background:rgba(0,0,0,0.55);border-radius:20px;
+    padding:6px 12px;pointer-events:auto;
+  }
+  .pin-scale-control input[type=range]{width:100%;accent-color:var(--ember);}
+  /* Caption/top-text position pins — small draggable labels representing
+     the CENTER of that text block (matches the backend's \pos+Alignment5
+     anchor exactly, so dragging the pin is a true WYSIWYG preview of
+     where the text will render). Unlike the facecam bubble these don't
+     preview real text, just a compact anchor point — the actual caption
+     text is only visible in the rendered clip itself. */
+  .text-position-overlay{position:absolute;inset:0;z-index:5;pointer-events:none;}
+  .text-position-pin{
+    position:absolute;transform:translate(-50%,-50%);
+    background:rgba(30,31,34,0.85);border:2px solid var(--ember-glow,var(--ember));
+    color:var(--paper);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;
+    cursor:grab;touch-action:none;pointer-events:auto;box-shadow:0 2px 10px rgba(0,0,0,0.4);
+    white-space:nowrap;
+  }
+  .text-position-pin.dragging{cursor:grabbing;background:rgba(30,31,34,0.95);}
+  .text-position-pin.top-text-pin{border-color:#5fd97f;}
+  /* Center alignment guides — a thin line flashes across the frame the
+     instant a dragged pin/bubble snaps to dead-center on that axis,
+     exactly like Canva/CapCut's snap-to-middle guides. */
+  .snap-guide{position:absolute;background:var(--ember);z-index:7;pointer-events:none;display:none;}
+  .snap-guide-v{top:0;bottom:0;left:50%;width:1px;}
+  .snap-guide-h{left:0;right:0;top:50%;height:1px;}
+  .snap-guide.on{display:block;}
   .top-text-words{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
   .top-text-word{
     border:1px solid var(--line-strong);border-radius:4px;padding:4px 9px;font-size:12.5px;
@@ -1140,9 +1172,20 @@
             <div class="playbtn" id="playBtn">▶</div>
             <div class="cap-overlay style-bold" id="capOverlay" contenteditable="true" spellcheck="false">okay so here's the thing</div>
             <button type="button" id="facecamToggleBtn" class="reposition-toggle-btn" style="display:none;" title="Cut a facecam corner and float it over the video">🎯 Facecam crop</button>
+            <div class="snap-guide snap-guide-v" id="snapGuideV"></div>
+            <div class="snap-guide snap-guide-h" id="snapGuideH"></div>
             <div class="pip-position-overlay" id="pipPositionOverlay" style="display:none;">
               <div class="pip-position-hint">Drag the bubble to position your facecam</div>
               <div class="pip-position-handle" id="pipPositionHandle"></div>
+              <div class="pin-scale-control pip-scale-control" id="pipScaleControl">
+                <input type="range" id="pipScaleSlider" min="0.4" max="2.5" step="0.05" value="1">
+              </div>
+            </div>
+            <div class="text-position-overlay" id="captionPositionOverlay">
+              <div class="text-position-pin" id="captionPositionHandle">Aa</div>
+            </div>
+            <div class="text-position-overlay" id="topTextPositionOverlay" style="display:none;">
+              <div class="text-position-pin top-text-pin" id="topTextPositionHandle">Title</div>
             </div>
             <div class="reposition-overlay" id="facecamOverlay">
               <div class="reposition-hint">Drag to move · drag a corner to resize</div>
@@ -1240,12 +1283,12 @@
                 <input type="checkbox" id="captionBoldToggle">
                 Force bold
               </label>
-              <div style="font-size:12px;color:var(--iron);margin-bottom:6px;">Position</div>
-              <div class="cg-swatches" id="captionPositionSwatches" style="grid-template-columns:repeat(3,1fr);">
-                <button class="cg-swatch" data-position="top">Top</button>
-                <button class="cg-swatch" data-position="center">Center</button>
-                <button class="cg-swatch active" data-position="bottom">Bottom</button>
-              </div>
+              <div style="font-size:12px;color:var(--iron);margin-bottom:8px;">Drag the <b>Aa</b> pin on the preview to move captions anywhere in frame.</div>
+              <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--iron);">
+                Size
+                <input type="range" id="captionScaleSlider" min="0.5" max="2.2" step="0.05" value="1" style="flex:1;">
+                <span id="captionScaleValue" style="min-width:32px;text-align:right;color:var(--paper);">100%</span>
+              </label>
             </div>
             <div class="effects-section">
               <div class="effects-label">Motion</div>
@@ -1287,12 +1330,12 @@
                 <input type="checkbox" id="topTextBoldToggle" checked>
                 Bold
               </label>
-              <div style="font-size:12px;color:var(--iron);margin-bottom:6px;">Position</div>
-              <div class="cg-swatches" id="topTextPositionSwatches" style="grid-template-columns:repeat(3,1fr);">
-                <button class="cg-swatch active" data-position="top">Top</button>
-                <button class="cg-swatch" data-position="center">Center</button>
-                <button class="cg-swatch" data-position="bottom">Bottom</button>
-              </div>
+              <div style="font-size:12px;color:var(--iron);margin-bottom:8px;">Drag the <b>Title</b> pin on the preview to move it anywhere in frame.</div>
+              <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--iron);">
+                Size
+                <input type="range" id="topTextScaleSlider" min="0.5" max="2.2" step="0.05" value="1" style="flex:1;">
+                <span id="topTextScaleValue" style="min-width:32px;text-align:right;color:var(--paper);">100%</span>
+              </label>
             </div>
             <div class="effects-section">
               <div class="effects-label">Sound effects — click one, then click the timeline below to drop it (click it again to stop placing)</div>
@@ -2108,14 +2151,15 @@
         scheduleRestyle();
       });
     });
-    // ===== Caption / top-text properties: capitalize, bold, position =====
+    // ===== Caption / top-text properties: capitalize, bold =====
     // Mirrors pipeline.py's words_to_ass() params exactly — see
     // collectClipOptions() below for how these get sent. Bold here is an
     // ADDITIVE override (checking it forces bold on regardless of the
     // chosen caption style; leaving it unchecked keeps the style's own
     // default look, same as before this existed) — matches caption_bold
     // being sent as `true` when checked and omitted/false otherwise.
-    let captionPosition = 'bottom', topTextPosition = 'top';
+    // Position is handled separately by the free-drag pins further down
+    // (see captionX/Y and topTextX/Y near the top-text section).
     const captionUppercaseToggle = document.getElementById('captionUppercaseToggle');
     const captionBoldToggle = document.getElementById('captionBoldToggle');
     const topTextUppercaseToggle = document.getElementById('topTextUppercaseToggle');
@@ -2123,20 +2167,6 @@
     [captionUppercaseToggle, captionBoldToggle, topTextUppercaseToggle, topTextBoldToggle].forEach(el=>{
       if(el) el.addEventListener('change', scheduleRestyle);
     });
-    function wirePositionSwatches(containerId, onPick){
-      const container = document.getElementById(containerId);
-      if(!container) return;
-      container.querySelectorAll('.cg-swatch').forEach(sw=>{
-        sw.addEventListener('click', ()=>{
-          container.querySelectorAll('.cg-swatch').forEach(s=>s.classList.remove('active'));
-          sw.classList.add('active');
-          onPick(sw.dataset.position);
-          scheduleRestyle();
-        });
-      });
-    }
-    wirePositionSwatches('captionPositionSwatches', (v)=>{ captionPosition = v; });
-    wirePositionSwatches('topTextPositionSwatches', (v)=>{ topTextPosition = v; });
     // NOTE: updatePremiumLocks() isn't called here — `currentUser` is
     // declared further down in this script (with `let`, not yet
     // initialized at this point), so calling it this early would throw.
@@ -2377,32 +2407,47 @@
       if(hasClip) renderSfxTimeTicks();
       gameplayBgToggle.checked = false;
       updateGameplayBgToggleAvailability();
-      // Facecam VALUES aren't touched, but the toggle button/PIP-bubble
+      // Facecam/caption/top-text VALUES aren't touched (all three are
+      // baked directly into every /reclip render, same as the facecam
+      // crop — see the big comment above), but each pin/bubble's
       // visibility still needs to reflect whichever clip is now on screen
       // (e.g. hidden entirely once there's no clip at all).
       facecamToggleBtn.style.display = hasClip ? 'block' : 'none';
       updatePipPositionVisibility();
+      updateCaptionPositionVisibility();
+      updateTopTextPositionVisibility();
     }
     // Full reset — sfx/gameplay-bg (via resetSfxPlacementsForClip above)
-    // PLUS the facecam/PIP crop itself. Use this ONLY when the underlying
+    // PLUS the facecam SOURCE-CROP selection (crop_x/y/w/h — WHICH region
+    // of the frame is the facecam). Use this ONLY when the underlying
     // video is genuinely different: leaving real-clip mode entirely, or
     // starting a brand new job. A fresh job has no facecam confirmed yet
-    // (server-side default is the plain auto-centered crop), so the UI
-    // should match that rather than carry over a crop that made sense for
-    // a completely different video.
+    // (server-side default is the plain auto-centered crop), and the
+    // facecam's screen position within a totally different video is
+    // meaningless, so the UI should match that rather than carry over a
+    // crop that made sense for a completely different video.
+    //
+    // pipX/pipY/pipScale (where the bubble sits ON SCREEN once found) and
+    // captionX/Y/Scale, topTextX/Y/Scale are NOT reset here — same as
+    // caption_style/color grade/top-text content, these are treated as
+    // your ongoing style preferences that carry over to the next job
+    // rather than something that needs re-doing every time.
     function resetSfxTimelineForClip(){
-      resetSfxPlacementsForClip();
+      // Set the facecam-value resets FIRST, then call
+      // resetSfxPlacementsForClip() LAST — it's the one that actually
+      // refreshes every pin/bubble's visibility, and it needs to run
+      // AFTER facecamActive is already false, otherwise the pip bubble
+      // would briefly still read as "active" and stay visible.
       const hasClip = currentRealClipIndex > -1;
       facecamEditing = false;
       facecamActive = false;
       cropX = 0.62; cropY = 0.04; cropW = 0.34; cropH = 0.30;
-      pipX = 0.65; pipY = 0.04;
       renderFacecamBox();
       facecamOverlay.classList.remove('on');
       facecamToggleBtn.classList.remove('on');
       facecamToggleBtn.textContent = '🎯 Facecam crop';
       facecamToggleBtn.style.display = hasClip ? 'block' : 'none';
-      updatePipPositionVisibility();
+      resetSfxPlacementsForClip();
     }
 
     // ===== Facecam crop (drag a resizable box over a facecam corner —
@@ -2427,12 +2472,18 @@
     // gameplay/stream footage.
     let cropX = 0.62, cropY = 0.04, cropW = 0.34, cropH = 0.30;
     // Position (0..1, fraction of the 1080x1920 output canvas) of the
-    // facecam PICTURE-IN-PICTURE bubble's top-left corner, floating over
-    // the original full video — NOT a replacement crop. Defaults to a
-    // small bubble near the top-right, the most common facecam spot.
-    // Adjustable after the fact by dragging the bubble, see the
-    // pip-position drag handlers below.
-    let pipX = 0.65, pipY = 0.04;
+    // facecam PICTURE-IN-PICTURE bubble's CENTER, floating over the
+    // original full video — NOT a replacement crop. Defaults to a small
+    // bubble near the top-right, the most common facecam spot. Adjustable
+    // after the fact by dragging the bubble, see the pip-position drag
+    // handlers below. Center (not corner) matches the same anchor model
+    // used for the caption/top-text position pins, so all three share one
+    // snap-to-middle helper.
+    let pipX = 0.8, pipY = 0.12;
+    // Size of the PIP bubble as a multiple of its base width — 1.0 is the
+    // original fixed 340px-wide bubble, adjustable via the size slider
+    // that rides inside the pip-position overlay.
+    let pipScale = 1.0;
     // Aspect ratio (width/height) of the source video, captured when the
     // facecam crop box is opened — used only to draw a roughly-accurate
     // bubble shape in the position-drag UI; the actual render always uses
@@ -2440,8 +2491,31 @@
     let facecamSourceAspect = 16 / 9;
     // Must match pipeline.py's PIP_WIDTH_PX / the 1080px-wide output
     // canvas, so the drag UI's bubble size roughly matches what renders.
-    const PIP_WIDTH_FRAC = 340 / 1080;
+    const PIP_WIDTH_FRAC_BASE = 340 / 1080;
     const MIN_CROP_SIZE = 0.08; // stop a resize from collapsing the box to nothing
+
+    // ===== Shared center-snap helper for the facecam bubble AND the
+    // caption/top-text position pins — dragging any of the three within a
+    // few percent of dead-center on an axis snaps it exactly to 0.5 and
+    // flashes a guide line, same behavior as Canva/CapCut's alignment
+    // guides. `frac` is the axis fraction BEFORE snapping (already the
+    // element's own center, since every draggable here uses center-anchor
+    // semantics); returns the possibly-snapped value. =====
+    const SNAP_THRESHOLD = 0.025;
+    const snapGuideV = document.getElementById('snapGuideV');
+    const snapGuideH = document.getElementById('snapGuideH');
+    function snapAxis(frac, guideEl){
+      if(Math.abs(frac - 0.5) < SNAP_THRESHOLD){
+        if(guideEl) guideEl.classList.add('on');
+        return 0.5;
+      }
+      if(guideEl) guideEl.classList.remove('on');
+      return frac;
+    }
+    function hideSnapGuides(){
+      snapGuideV.classList.remove('on');
+      snapGuideH.classList.remove('on');
+    }
 
     function renderFacecamBox(){
       facecamBox.style.left = (cropX * 100) + '%';
@@ -2547,20 +2621,29 @@
       if(show) renderPipPositionHandle();
     }
     // Sizes the handle to roughly match the real PIP bubble's proportions
-    // (PIP_WIDTH_FRAC wide, height derived from the selected crop's aspect
-    // ratio) so the drag UI is a reasonable visual preview — the actual
-    // render always uses the real crop dimensions regardless of this
-    // estimate, so a slightly-off shape here is purely cosmetic.
+    // (base width scaled by pipScale, height derived from the selected
+    // crop's aspect ratio) so the drag UI is a reasonable visual preview —
+    // the actual render always uses the real crop dimensions regardless
+    // of this estimate, so a slightly-off shape here is purely cosmetic.
+    // pipX/pipY are the bubble's CENTER, so left/top are offset by half
+    // the bubble's own width/height.
     function renderPipPositionHandle(){
       if(!pipPositionHandle) return;
       const cropAspect = (cropW > 0 && cropH > 0) ? (cropH / cropW) : 1;
-      let heightFrac = PIP_WIDTH_FRAC * cropAspect / facecamSourceAspect;
-      heightFrac = Math.max(0.05, Math.min(0.55, heightFrac));
-      pipPositionHandle.style.left = (pipX * 100) + '%';
-      pipPositionHandle.style.top = (pipY * 100) + '%';
-      pipPositionHandle.style.width = (PIP_WIDTH_FRAC * 100) + '%';
-      pipPositionHandle.style.height = (heightFrac * 100) + '%';
+      const wFrac = PIP_WIDTH_FRAC_BASE * pipScale;
+      let hFrac = wFrac * cropAspect / facecamSourceAspect;
+      hFrac = Math.max(0.05, Math.min(0.6, hFrac));
+      pipPositionHandle.style.left = ((pipX - wFrac / 2) * 100) + '%';
+      pipPositionHandle.style.top = ((pipY - hFrac / 2) * 100) + '%';
+      pipPositionHandle.style.width = (wFrac * 100) + '%';
+      pipPositionHandle.style.height = (hFrac * 100) + '%';
     }
+    const pipScaleSlider = document.getElementById('pipScaleSlider');
+    if(pipScaleSlider) pipScaleSlider.addEventListener('input', ()=>{
+      pipScale = parseFloat(pipScaleSlider.value);
+      renderPipPositionHandle();
+      scheduleRestyle();
+    });
     pipPositionHandle.addEventListener('pointerdown', (e)=>{
       e.stopPropagation();
       pipPositionHandle.setPointerCapture(e.pointerId);
@@ -2571,13 +2654,18 @@
       const wFrac = parseFloat(pipPositionHandle.style.width) / 100;
       const hFrac = parseFloat(pipPositionHandle.style.height) / 100;
       function onMove(ev){
-        pipX = Math.max(0, Math.min(1 - wFrac, origX + (ev.clientX - startX) / rect.width));
-        pipY = Math.max(0, Math.min(1 - hFrac, origY + (ev.clientY - startY) / rect.height));
-        pipPositionHandle.style.left = (pipX * 100) + '%';
-        pipPositionHandle.style.top = (pipY * 100) + '%';
+        let x = origX + (ev.clientX - startX) / rect.width;
+        let y = origY + (ev.clientY - startY) / rect.height;
+        x = snapAxis(x, snapGuideV);
+        y = snapAxis(y, snapGuideH);
+        pipX = Math.max(wFrac / 2, Math.min(1 - wFrac / 2, x));
+        pipY = Math.max(hFrac / 2, Math.min(1 - hFrac / 2, y));
+        pipPositionHandle.style.left = ((pipX - wFrac / 2) * 100) + '%';
+        pipPositionHandle.style.top = ((pipY - hFrac / 2) * 100) + '%';
       }
       function onUp(){
         pipPositionHandle.classList.remove('dragging');
+        hideSnapGuides();
         document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
         scheduleRestyle(); // real re-render lands with the new PIP position
@@ -2591,12 +2679,20 @@
       facecamToggleBtn.classList.toggle('on', facecamEditing);
       facecamToggleBtn.textContent = facecamEditing ? '✓ Done' : '🎯 Facecam crop';
       if(facecamEditing){
-        updatePipPositionVisibility(); // hide the drag bubble while the box is open — avoid clutter
+        // Hide ALL THREE drag pins/bubbles while the crop box is open —
+        // avoids four overlapping draggables cluttering a small preview
+        // at once (the source-preview swap below also changes the video
+        // underneath entirely, so the other pins wouldn't line up anyway).
+        updatePipPositionVisibility();
+        updateCaptionPositionVisibility();
+        updateTopTextPositionVisibility();
         showSourcePreviewForFacecam();
       }else{
         facecamActive = true; // confirm the box the user just positioned
         restoreRenderedPreview(); // instant visual reset...
         updatePipPositionVisibility();
+        updateCaptionPositionVisibility();
+        updateTopTextPositionVisibility();
         scheduleRestyle();        // ...then the real re-render with the new crop lands moments later
       }
     });
@@ -2692,8 +2788,102 @@
     let topTextInputTimer = null;
     topTextInput.addEventListener('input', ()=>{
       renderTopTextWords();
+      updateTopTextPositionVisibility(); // title pin only shows once there's actually a title
       clearTimeout(topTextInputTimer);
       topTextInputTimer = setTimeout(scheduleRestyle, 700);
+    });
+
+    // ===== Free-drag position pins for captions + top text (replaces the
+    // old top/center/bottom preset buttons) — each pin marks the CENTER
+    // of that text block, matching pipeline.py's \pos+Alignment5 anchor
+    // exactly, so dragging the pin is a true preview of where the text
+    // will land. Shares the snapAxis()/hideSnapGuides() helpers defined
+    // above (facecam bubble section) so all three draggables snap to
+    // dead-center the same way. =====
+    let captionX = 0.5, captionY = 0.88, captionScale = 1.0;
+    let topTextX = 0.5, topTextY = 0.08, topTextScale = 1.0;
+    const captionPositionOverlay = document.getElementById('captionPositionOverlay');
+    const captionPositionHandle = document.getElementById('captionPositionHandle');
+    const topTextPositionOverlay = document.getElementById('topTextPositionOverlay');
+    const topTextPositionHandle = document.getElementById('topTextPositionHandle');
+
+    function renderCaptionPositionHandle(){
+      if(!captionPositionHandle) return;
+      captionPositionHandle.style.left = (captionX * 100) + '%';
+      captionPositionHandle.style.top = (captionY * 100) + '%';
+    }
+    function updateCaptionPositionVisibility(){
+      if(!captionPositionOverlay) return;
+      // Captions always exist once a real clip is on screen — hidden only
+      // while the facecam crop box is open, so three overlapping
+      // draggables don't clutter a small preview at once.
+      const show = currentRealClipIndex > -1 && !facecamEditing;
+      captionPositionOverlay.style.display = show ? 'block' : 'none';
+      if(show) renderCaptionPositionHandle();
+    }
+    function renderTopTextPositionHandle(){
+      if(!topTextPositionHandle) return;
+      topTextPositionHandle.style.left = (topTextX * 100) + '%';
+      topTextPositionHandle.style.top = (topTextY * 100) + '%';
+    }
+    function updateTopTextPositionVisibility(){
+      if(!topTextPositionOverlay) return;
+      const show = currentRealClipIndex > -1 && !facecamEditing && topTextInput.value.trim().length > 0;
+      topTextPositionOverlay.style.display = show ? 'block' : 'none';
+      if(show) renderTopTextPositionHandle();
+    }
+    // Shared drag wiring for a simple point-pin — unlike the facecam
+    // bubble these have no width/height of their own to offset by, the
+    // pin's own CSS already centers itself on (x,y) via `transform:
+    // translate(-50%,-50%)`, so the dragged fraction IS the center.
+    function wireTextPositionPin(handle, overlay, getXY, setXY, onRender){
+      if(!handle) return;
+      handle.addEventListener('pointerdown', (e)=>{
+        e.stopPropagation();
+        handle.setPointerCapture(e.pointerId);
+        handle.classList.add('dragging');
+        const rect = overlay.getBoundingClientRect();
+        const startX = e.clientX, startY = e.clientY;
+        const [origX, origY] = getXY();
+        function onMove(ev){
+          let x = origX + (ev.clientX - startX) / rect.width;
+          let y = origY + (ev.clientY - startY) / rect.height;
+          x = Math.max(0, Math.min(1, x));
+          y = Math.max(0, Math.min(1, y));
+          x = snapAxis(x, snapGuideV);
+          y = snapAxis(y, snapGuideH);
+          setXY(x, y);
+          onRender();
+        }
+        function onUp(){
+          handle.classList.remove('dragging');
+          hideSnapGuides();
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+          scheduleRestyle();
+        }
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      });
+    }
+    wireTextPositionPin(captionPositionHandle, captionPositionOverlay,
+      ()=>[captionX, captionY], (x, y)=>{ captionX = x; captionY = y; }, renderCaptionPositionHandle);
+    wireTextPositionPin(topTextPositionHandle, topTextPositionOverlay,
+      ()=>[topTextX, topTextY], (x, y)=>{ topTextX = x; topTextY = y; }, renderTopTextPositionHandle);
+
+    const captionScaleSlider = document.getElementById('captionScaleSlider');
+    const captionScaleValue = document.getElementById('captionScaleValue');
+    if(captionScaleSlider) captionScaleSlider.addEventListener('input', ()=>{
+      captionScale = parseFloat(captionScaleSlider.value);
+      if(captionScaleValue) captionScaleValue.textContent = Math.round(captionScale * 100) + '%';
+      scheduleRestyle();
+    });
+    const topTextScaleSlider = document.getElementById('topTextScaleSlider');
+    const topTextScaleValue = document.getElementById('topTextScaleValue');
+    if(topTextScaleSlider) topTextScaleSlider.addEventListener('input', ()=>{
+      topTextScale = parseFloat(topTextScaleSlider.value);
+      if(topTextScaleValue) topTextScaleValue.textContent = Math.round(topTextScale * 100) + '%';
+      scheduleRestyle();
     });
 
     document.getElementById('zoomPanToggle').addEventListener('change', scheduleRestyle);
@@ -2723,21 +2913,30 @@
         crop_y: facecamActive ? cropY : 0,
         crop_w: facecamActive ? cropW : 0,
         crop_h: facecamActive ? cropH : 1,
-        // Facecam PICTURE-IN-PICTURE position (0..1 fraction of the output
-        // canvas) — only takes effect server-side when crop_w > 0 above.
+        // Facecam PICTURE-IN-PICTURE position + size (0..1 fraction of the
+        // output canvas / multiplier) — only takes effect server-side
+        // when crop_w > 0 above.
         pip_x: pipX,
         pip_y: pipY,
+        pip_scale: pipScale,
         top_text: topTextInput.value.trim(),
         top_text_colors: topTextColors,
-        caption_position: captionPosition,
         caption_uppercase: captionUppercaseToggle ? captionUppercaseToggle.checked : false,
         // captionBoldToggle unchecked means "don't override the style's
         // own bold setting" — sent as null (JSON) / omitted (FormData),
         // NOT false, so it doesn't force-unbold naturally-bold styles.
         caption_bold: (captionBoldToggle && captionBoldToggle.checked) ? true : null,
-        top_text_position: topTextPosition,
         top_text_uppercase: topTextUppercaseToggle ? topTextUppercaseToggle.checked : false,
         top_text_bold: topTextBoldToggle ? topTextBoldToggle.checked : true,
+        // Free-drag position (0..1, CENTER of the text block) + size
+        // multiplier for the spoken captions and the pinned top text —
+        // see the position-pin drag handlers above.
+        caption_x: captionX,
+        caption_y: captionY,
+        caption_scale: captionScale,
+        top_text_x: topTextX,
+        top_text_y: topTextY,
+        top_text_scale: topTextScale,
       };
     }
     // switches
