@@ -809,6 +809,7 @@
       <a href="#faq">FAQ</a>
     </nav>
     <div class="nav-cta">
+      <a href="javascript:void(0)" class="nav-signin" id="navInviteLink" onclick="openReferralModal()" style="display:none;">🎁 Invite</a>
       <a href="javascript:void(0)" class="nav-signin" id="navAuthLink" onclick="openAuthModal('login')">Sign in</a>
       <a href="#pricing" class="btn btn-primary">Start free</a>
     </div>
@@ -861,6 +862,20 @@
     </form>
   </div>
 </div>
+<!-- REFERRAL MODAL -->
+<div class="modal-overlay" id="referralModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeReferralModal()">✕</button>
+    <h3 style="margin:0 0 6px;">Invite a friend, get +5 free uploads</h3>
+    <p style="color:var(--muted,#999);font-size:13px;margin:0 0 16px;">When they sign up and verify their email, you both get <b style="color:var(--ember-glow);">+5 free uploads</b> added to your current window.</p>
+    <label style="display:block;font-size:12.5px;font-weight:600;color:var(--muted,#999);margin-bottom:6px;">Your referral link</label>
+    <div style="display:flex;gap:8px;">
+      <input type="text" id="referralLinkInput" readonly style="flex:1;font-family:var(--font-mono);font-size:12.5px;">
+      <button type="button" class="btn btn-primary" id="copyReferralBtn" style="width:auto;flex-shrink:0;padding:0 16px;">Copy</button>
+    </div>
+    <div style="margin-top:12px;font-size:12.5px;color:var(--muted,#999);" id="referralBonusStatus"></div>
+  </div>
+</div>
 <div class="ruler">
   <div class="playhead"></div>
   <span class="tc" style="left:4%">00:00:00</span>
@@ -882,6 +897,9 @@
         <a href="#how" class="btn btn-ghost">See how it works</a>
       </div>
       <div class="hero-note">✦ <b>10 free clips from uploaded video</b> · no card required · full 1080p, zero watermark</div>
+      <div id="publicStatsBadge" style="display:none;margin-top:14px;font-size:12.5px;color:var(--muted,#999);font-family:var(--font-mono);">
+        🔥 <b id="publicStatsClips" style="color:var(--ember-glow);"></b> clips generated so far
+      </div>
     </div>
     <div class="reveal">
     <div class="clip-window">
@@ -2937,6 +2955,57 @@
   }
   function closeAuthModal(){ authModal.classList.remove('on'); }
   authModal.addEventListener('click', (e)=>{ if(e.target === authModal) closeAuthModal(); });
+  // ===== Referral modal =====
+  const referralModal = document.getElementById('referralModal');
+  function openReferralModal(){
+    if(!currentUser || !currentUser.referralLink) return;
+    document.getElementById('referralLinkInput').value = currentUser.referralLink;
+    document.getElementById('referralBonusStatus').textContent = currentUser.bonusFreeUploads > 0
+      ? `You've earned +${currentUser.bonusFreeUploads} bonus uploads so far from referrals.`
+      : '';
+    referralModal.classList.add('on');
+  }
+  function closeReferralModal(){ referralModal.classList.remove('on'); }
+  if(referralModal) referralModal.addEventListener('click', (e)=>{ if(e.target === referralModal) closeReferralModal(); });
+  const copyReferralBtn = document.getElementById('copyReferralBtn');
+  if(copyReferralBtn){
+    copyReferralBtn.addEventListener('click', async ()=>{
+      const input = document.getElementById('referralLinkInput');
+      try{
+        await navigator.clipboard.writeText(input.value);
+        const original = copyReferralBtn.textContent;
+        copyReferralBtn.textContent = 'Copied!';
+        setTimeout(()=>{ copyReferralBtn.textContent = original; }, 1500);
+      }catch(err){
+        input.select();
+      }
+    });
+  }
+  // Captures ?ref=CODE from an invite link into localStorage so it survives
+  // navigating to the signup form, then gets attached to the signup request
+  // (see the signupForm submit handler below). Doesn't overwrite an existing
+  // stored code — first link clicked wins, same as most referral programs.
+  (function captureReferralCode(){
+    const ref = new URLSearchParams(window.location.search).get('ref');
+    if(ref && !localStorage.getItem('viralcut_ref')){
+      localStorage.setItem('viralcut_ref', ref);
+    }
+  })();
+  // Live "clips generated" trust badge on the hero — public, no auth, works
+  // for signed-out visitors (see GET /api/public-stats in server.js). Held
+  // back below a small threshold so a brand-new site doesn't advertise a
+  // tiny, unimpressive number.
+  (async function loadPublicStats(){
+    const MIN_DISPLAY_THRESHOLD = 25;
+    try{
+      const res = await fetch(`${BACKEND_URL}/api/public-stats`);
+      if(!res.ok) return;
+      const data = await res.json();
+      if((data.totalClipsGenerated || 0) < MIN_DISPLAY_THRESHOLD) return;
+      document.getElementById('publicStatsClips').textContent = data.totalClipsGenerated.toLocaleString();
+      document.getElementById('publicStatsBadge').style.display = 'block';
+    }catch(err){ /* stays hidden — fine, purely cosmetic */ }
+  })();
   function switchAuthTab(tab){
     document.querySelectorAll('.modal-tab-btn').forEach(b=> b.classList.toggle('active', b.dataset.modalTab===tab));
     document.querySelectorAll('.modal-panel').forEach(p=> p.classList.toggle('active', p.dataset.modalPanel===tab));
@@ -2969,6 +3038,8 @@
         currentUser = await res.json();
         document.getElementById('navAuthLink').textContent = currentUser.email.split('@')[0];
         document.getElementById('navAuthLink').setAttribute('onclick', "window.location.href='dashboard.html'");
+        const inviteLink = document.getElementById('navInviteLink');
+        if(inviteLink) inviteLink.style.display = currentUser.referralLink ? 'inline-flex' : 'none';
       } else if(res.status === 401){
         clearToken(); // stale/expired token — stop sending it
       }
@@ -3020,17 +3091,25 @@
   (function handleVerifyRedirect(){
     const params = new URLSearchParams(window.location.search);
     const verified = params.get('verified');
-    if(!verified) return;
+    const unsubscribed = params.get('unsubscribed');
+    if(!verified && !unsubscribed) return;
     const toast = document.getElementById('verifyToast');
     if(toast){
-      const messages = { '1': '✅ Email verified — you\'re all set.', 'expired': '⚠️ That verification link expired — request a new one from the banner below.', '0': '⚠️ That verification link is invalid or already used.' };
-      toast.textContent = messages[verified] || '';
-      if(toast.textContent){
+      let text = '';
+      if(verified){
+        const messages = { '1': '✅ Email verified — you\'re all set.', 'expired': '⚠️ That verification link expired — request a new one from the banner below.', '0': '⚠️ That verification link is invalid or already used.' };
+        text = messages[verified] || '';
+      }else if(unsubscribed){
+        text = unsubscribed === '1' ? '✅ You\'ve been unsubscribed from marketing emails.' : '⚠️ That unsubscribe link is invalid.';
+      }
+      toast.textContent = text;
+      if(text){
         toast.style.display = 'block';
         setTimeout(()=>{ toast.style.display = 'none'; }, 6000);
       }
     }
     params.delete('verified');
+    params.delete('unsubscribed');
     const newSearch = params.toString();
     const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash;
     window.history.replaceState({}, '', newUrl);
@@ -3041,17 +3120,19 @@
     const email = document.getElementById('signupEmail').value;
     const password = document.getElementById('signupPassword').value;
     const marketingOptIn = document.getElementById('signupMarketingOptIn').checked;
+    const referredBy = localStorage.getItem('viralcut_ref') || null;
     const errEl = document.getElementById('signupError');
     errEl.classList.remove('on');
     try{
       const res = await fetch(`${BACKEND_URL}/api/signup`, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({email, password, marketingOptIn})
+        body: JSON.stringify({email, password, marketingOptIn, referredBy})
       });
       const data = await res.json();
       if(!res.ok){ errEl.textContent = data.error || 'Could not create account'; errEl.classList.add('on'); return; }
       setToken(data.token);
+      localStorage.removeItem('viralcut_ref'); // consumed — don't attribute a second signup to the same click
       window.location.href = 'dashboard.html';
     }catch(err){
       errEl.textContent = 'Could not reach the server. Is the ViralCut backend running?';
