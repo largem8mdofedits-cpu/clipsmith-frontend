@@ -1231,6 +1231,23 @@
               </div>
             </div>
             <div class="effects-section">
+              <div class="effects-label">Caption text</div>
+              <label class="zoom-toggle-row">
+                <input type="checkbox" id="captionUppercaseToggle">
+                ALL CAPS
+              </label>
+              <label class="zoom-toggle-row" style="margin-bottom:10px;">
+                <input type="checkbox" id="captionBoldToggle">
+                Force bold
+              </label>
+              <div style="font-size:12px;color:var(--iron);margin-bottom:6px;">Position</div>
+              <div class="cg-swatches" id="captionPositionSwatches" style="grid-template-columns:repeat(3,1fr);">
+                <button class="cg-swatch" data-position="top">Top</button>
+                <button class="cg-swatch" data-position="center">Center</button>
+                <button class="cg-swatch active" data-position="bottom">Bottom</button>
+              </div>
+            </div>
+            <div class="effects-section">
               <div class="effects-label">Motion</div>
               <label class="zoom-toggle-row">
                 <input type="checkbox" id="zoomPanToggle">
@@ -1262,6 +1279,20 @@
               <div style="font-size:12.5px;color:var(--iron);margin-bottom:8px;">A pinned title/hook line at the top of the frame, separate from the spoken captions below. Click a word to cycle its color.</div>
               <input type="text" id="topTextInput" placeholder="e.g. WAIT FOR IT" maxlength="80" style="width:100%;box-sizing:border-box;padding:9px 11px;background:var(--void);border:1px solid var(--line-strong);border-radius:5px;color:var(--paper);font-size:13px;">
               <div class="top-text-words" id="topTextWords"></div>
+              <label class="zoom-toggle-row" style="margin-top:10px;">
+                <input type="checkbox" id="topTextUppercaseToggle">
+                ALL CAPS
+              </label>
+              <label class="zoom-toggle-row" style="margin-bottom:10px;">
+                <input type="checkbox" id="topTextBoldToggle" checked>
+                Bold
+              </label>
+              <div style="font-size:12px;color:var(--iron);margin-bottom:6px;">Position</div>
+              <div class="cg-swatches" id="topTextPositionSwatches" style="grid-template-columns:repeat(3,1fr);">
+                <button class="cg-swatch active" data-position="top">Top</button>
+                <button class="cg-swatch" data-position="center">Center</button>
+                <button class="cg-swatch" data-position="bottom">Bottom</button>
+              </div>
             </div>
             <div class="effects-section">
               <div class="effects-label">Sound effects — click one, then click the timeline below to drop it (click it again to stop placing)</div>
@@ -2077,6 +2108,35 @@
         scheduleRestyle();
       });
     });
+    // ===== Caption / top-text properties: capitalize, bold, position =====
+    // Mirrors pipeline.py's words_to_ass() params exactly — see
+    // collectClipOptions() below for how these get sent. Bold here is an
+    // ADDITIVE override (checking it forces bold on regardless of the
+    // chosen caption style; leaving it unchecked keeps the style's own
+    // default look, same as before this existed) — matches caption_bold
+    // being sent as `true` when checked and omitted/false otherwise.
+    let captionPosition = 'bottom', topTextPosition = 'top';
+    const captionUppercaseToggle = document.getElementById('captionUppercaseToggle');
+    const captionBoldToggle = document.getElementById('captionBoldToggle');
+    const topTextUppercaseToggle = document.getElementById('topTextUppercaseToggle');
+    const topTextBoldToggle = document.getElementById('topTextBoldToggle');
+    [captionUppercaseToggle, captionBoldToggle, topTextUppercaseToggle, topTextBoldToggle].forEach(el=>{
+      if(el) el.addEventListener('change', scheduleRestyle);
+    });
+    function wirePositionSwatches(containerId, onPick){
+      const container = document.getElementById(containerId);
+      if(!container) return;
+      container.querySelectorAll('.cg-swatch').forEach(sw=>{
+        sw.addEventListener('click', ()=>{
+          container.querySelectorAll('.cg-swatch').forEach(s=>s.classList.remove('active'));
+          sw.classList.add('active');
+          onPick(sw.dataset.position);
+          scheduleRestyle();
+        });
+      });
+    }
+    wirePositionSwatches('captionPositionSwatches', (v)=>{ captionPosition = v; });
+    wirePositionSwatches('topTextPositionSwatches', (v)=>{ topTextPosition = v; });
     // NOTE: updatePremiumLocks() isn't called here — `currentUser` is
     // declared further down in this script (with `let`, not yet
     // initialized at this point), so calling it this early would throw.
@@ -2643,6 +2703,15 @@
         pip_y: pipY,
         top_text: topTextInput.value.trim(),
         top_text_colors: topTextColors,
+        caption_position: captionPosition,
+        caption_uppercase: captionUppercaseToggle ? captionUppercaseToggle.checked : false,
+        // captionBoldToggle unchecked means "don't override the style's
+        // own bold setting" — sent as null (JSON) / omitted (FormData),
+        // NOT false, so it doesn't force-unbold naturally-bold styles.
+        caption_bold: (captionBoldToggle && captionBoldToggle.checked) ? true : null,
+        top_text_position: topTextPosition,
+        top_text_uppercase: topTextUppercaseToggle ? topTextUppercaseToggle.checked : false,
+        top_text_bold: topTextBoldToggle ? topTextBoldToggle.checked : true,
       };
     }
     // switches
@@ -3145,7 +3214,14 @@
       formData.append('instruction', instruction);
       formData.append('voiceover', voiceover);
       formData.append('voiceover_voice', voiceoverVoice);
-      Object.entries(collectClipOptions()).forEach(([k, v]) => formData.append(k, v));
+      // Skip null/undefined entries (e.g. caption_bold when not overridden)
+      // rather than letting FormData stringify them to the literal text
+      // "null" — the backend's Optional[bool] Form param can't parse that,
+      // and omitting the field entirely lets its Form(None) default apply.
+      Object.entries(collectClipOptions()).forEach(([k, v]) => {
+        if(v === null || v === undefined) return;
+        formData.append(k, v);
+      });
       statusText.textContent = 'Uploading video…';
       const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/process-upload`, {
         method: 'POST',
