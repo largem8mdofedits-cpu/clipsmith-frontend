@@ -528,22 +528,30 @@
   }
   .reposition-overlay.on{display:block;}
   .reposition-overlay.dragging{cursor:grabbing;}
-  .reposition-grid{
-    position:absolute;inset:0;
-    background-image:linear-gradient(rgba(255,255,255,0.35) 1px,transparent 1px),
-      linear-gradient(90deg,rgba(255,255,255,0.35) 1px,transparent 1px);
-    background-size:33.333% 33.333%;
-    border:2px dashed rgba(255,255,255,0.6);pointer-events:none;
-  }
   .reposition-hint{
     position:absolute;top:8px;left:8px;right:64px;font-size:10.5px;color:var(--paper);
     background:rgba(0,0,0,0.55);border-radius:4px;padding:4px 7px;pointer-events:none;
   }
-  .reposition-marker{
-    position:absolute;width:14px;height:14px;border-radius:50%;background:var(--ember);
-    border:2px solid var(--paper);left:50%;top:50%;transform:translate(-50%,-50%);
-    pointer-events:none;box-shadow:0 0 0 3px rgba(0,0,0,0.4);
+  /* Facecam crop box — a resizable/draggable marquee for cutting a small
+     facecam (or any sub-region) out of the source frame and blowing it up
+     to fill the full 1080x1920 output. Replaces the old single-point
+     "reposition" pan control with something that can target a corner
+     facecam, not just shift a fixed 9:16 window around. The 2000px
+     box-shadow trick dims everything OUTSIDE the box, so the selected
+     region reads clearly as a spotlight. */
+  .facecam-box{
+    position:absolute;border:2px solid var(--ember);background:rgba(255,255,255,0.06);
+    box-shadow:0 0 0 2000px rgba(0,0,0,0.5);cursor:grab;touch-action:none;
   }
+  .facecam-box.dragging{cursor:grabbing;}
+  .facecam-handle{
+    position:absolute;width:16px;height:16px;background:var(--ember);
+    border:2px solid var(--paper);border-radius:3px;touch-action:none;
+  }
+  .facecam-handle[data-handle="nw"]{left:-9px;top:-9px;cursor:nwse-resize;}
+  .facecam-handle[data-handle="ne"]{right:-9px;top:-9px;cursor:nesw-resize;}
+  .facecam-handle[data-handle="sw"]{left:-9px;bottom:-9px;cursor:nesw-resize;}
+  .facecam-handle[data-handle="se"]{right:-9px;bottom:-9px;cursor:nwse-resize;}
   .top-text-words{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
   .top-text-word{
     border:1px solid var(--line-strong);border-radius:4px;padding:4px 9px;font-size:12.5px;
@@ -1113,11 +1121,15 @@
             <video id="realClipVideo" controls playsinline style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;"></video>
             <div class="playbtn" id="playBtn">▶</div>
             <div class="cap-overlay style-bold" id="capOverlay" contenteditable="true" spellcheck="false">okay so here's the thing</div>
-            <button type="button" id="repositionToggleBtn" class="reposition-toggle-btn" style="display:none;" title="Drag the video to change what's in frame">⤢ Reposition</button>
-            <div class="reposition-overlay" id="repositionOverlay">
-              <div class="reposition-grid"></div>
-              <div class="reposition-hint">Drag to reposition</div>
-              <div class="reposition-marker" id="repositionMarker"></div>
+            <button type="button" id="facecamToggleBtn" class="reposition-toggle-btn" style="display:none;" title="Cut a facecam corner and blow it up to fill the frame">🎯 Facecam crop</button>
+            <div class="reposition-overlay" id="facecamOverlay">
+              <div class="reposition-hint">Drag to move · drag a corner to resize</div>
+              <div class="facecam-box" id="facecamBox">
+                <div class="facecam-handle" data-handle="nw"></div>
+                <div class="facecam-handle" data-handle="ne"></div>
+                <div class="facecam-handle" data-handle="sw"></div>
+                <div class="facecam-handle" data-handle="se"></div>
+              </div>
             </div>
           </div>
           <div class="editor-preview-controls">
@@ -2269,56 +2281,106 @@
       // this same set of call sites a second time.
       gameplayBgToggle.checked = false;
       updateGameplayBgToggleAvailability();
-      // Frame position is also per-clip — a freshly (re)generated clip
-      // always starts centered server-side, so reset the UI to match
-      // rather than silently drifting out of sync with what's rendered.
-      panX = 0.5; panY = 0.5;
-      updateRepositionMarker();
-      repositionOverlay.classList.remove('on');
-      repositionToggleBtn.classList.remove('on');
-      repositionToggleBtn.textContent = '⤢ Reposition';
-      repositionToggleBtn.style.display = hasClip ? 'block' : 'none';
+      // Facecam crop is also per-clip — a freshly (re)generated clip always
+      // starts with the plain auto-centered crop server-side, so reset the
+      // UI to match rather than silently drifting out of sync with what's
+      // rendered.
+      facecamEnabled = false;
+      cropX = 0.62; cropY = 0.04; cropW = 0.34; cropH = 0.30;
+      renderFacecamBox();
+      facecamOverlay.classList.remove('on');
+      facecamToggleBtn.classList.remove('on');
+      facecamToggleBtn.textContent = '🎯 Facecam crop';
+      facecamToggleBtn.style.display = hasClip ? 'block' : 'none';
     }
 
-    // ===== Reposition (drag-to-pan the 9:16 crop) =====
-    const repositionToggleBtn = document.getElementById('repositionToggleBtn');
-    const repositionOverlay = document.getElementById('repositionOverlay');
-    const repositionMarker = document.getElementById('repositionMarker');
-    let panX = 0.5, panY = 0.5;
-    function updateRepositionMarker(){
-      repositionMarker.style.left = (panX * 100) + '%';
-      repositionMarker.style.top = (panY * 100) + '%';
+    // ===== Facecam crop (drag a resizable box over a facecam corner —
+    // that region gets cropped and blown up to fill the whole 1080x1920
+    // output). Replaces the old single-point "reposition" pan control,
+    // which could only slide a fixed 9:16 window around and couldn't
+    // target something as small as a corner facecam. =====
+    const facecamToggleBtn = document.getElementById('facecamToggleBtn');
+    const facecamOverlay = document.getElementById('facecamOverlay');
+    const facecamBox = document.getElementById('facecamBox');
+    let facecamEnabled = false;
+    // Fractions (0..1) of the SOURCE frame — matches what pipeline.py's
+    // crop filter expects directly, no unit conversion needed. Default box
+    // sits top-right, the single most common facecam placement in
+    // gameplay/stream footage.
+    let cropX = 0.62, cropY = 0.04, cropW = 0.34, cropH = 0.30;
+    const MIN_CROP_SIZE = 0.08; // stop a resize from collapsing the box to nothing
+
+    function renderFacecamBox(){
+      facecamBox.style.left = (cropX * 100) + '%';
+      facecamBox.style.top = (cropY * 100) + '%';
+      facecamBox.style.width = (cropW * 100) + '%';
+      facecamBox.style.height = (cropH * 100) + '%';
     }
-    repositionToggleBtn.addEventListener('click', ()=>{
-      const on = repositionOverlay.classList.toggle('on');
-      repositionToggleBtn.classList.toggle('on', on);
-      repositionToggleBtn.textContent = on ? '✓ Done' : '⤢ Reposition';
+    renderFacecamBox();
+
+    facecamToggleBtn.addEventListener('click', ()=>{
+      facecamEnabled = !facecamEnabled;
+      facecamOverlay.classList.toggle('on', facecamEnabled);
+      facecamToggleBtn.classList.toggle('on', facecamEnabled);
+      facecamToggleBtn.textContent = facecamEnabled ? '✓ Done' : '🎯 Facecam crop';
+      scheduleRestyle();
     });
-    function panFromEvent(e){
-      const rect = repositionOverlay.getBoundingClientRect();
-      const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-      const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-      return { x, y };
-    }
-    repositionOverlay.addEventListener('pointerdown', (e)=>{
-      repositionOverlay.setPointerCapture(e.pointerId);
-      repositionOverlay.classList.add('dragging');
-      const p = panFromEvent(e);
-      panX = p.x; panY = p.y;
-      updateRepositionMarker();
+
+    // Move the whole box by dragging its body (not a corner handle).
+    facecamBox.addEventListener('pointerdown', (e)=>{
+      if(e.target.classList.contains('facecam-handle')) return; // handles have their own listener below
+      e.stopPropagation();
+      facecamBox.setPointerCapture(e.pointerId);
+      facecamBox.classList.add('dragging');
+      const rect = facecamOverlay.getBoundingClientRect();
+      const startX = e.clientX, startY = e.clientY;
+      const origX = cropX, origY = cropY;
       function onMove(ev){
-        const pm = panFromEvent(ev);
-        panX = pm.x; panY = pm.y;
-        updateRepositionMarker();
+        cropX = Math.max(0, Math.min(1 - cropW, origX + (ev.clientX - startX) / rect.width));
+        cropY = Math.max(0, Math.min(1 - cropH, origY + (ev.clientY - startY) / rect.height));
+        renderFacecamBox();
       }
       function onUp(){
-        repositionOverlay.classList.remove('dragging');
+        facecamBox.classList.remove('dragging');
         document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
         scheduleRestyle();
       }
       document.addEventListener('pointermove', onMove);
       document.addEventListener('pointerup', onUp);
+    });
+
+    // Resize via a corner handle — the OPPOSITE corner stays anchored in
+    // place, same behavior as any standard crop-marquee tool.
+    facecamBox.querySelectorAll('.facecam-handle').forEach(handle=>{
+      handle.addEventListener('pointerdown', (e)=>{
+        e.stopPropagation();
+        handle.setPointerCapture(e.pointerId);
+        const corner = handle.dataset.handle;
+        const rect = facecamOverlay.getBoundingClientRect();
+        const anchorX = corner.includes('w') ? cropX + cropW : cropX;
+        const anchorY = corner.includes('n') ? cropY + cropH : cropY;
+        function onMove(ev){
+          const px = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
+          const py = Math.max(0, Math.min(1, (ev.clientY - rect.top) / rect.height));
+          const newX = corner.includes('w') ? Math.min(px, anchorX - MIN_CROP_SIZE) : anchorX;
+          const newY = corner.includes('n') ? Math.min(py, anchorY - MIN_CROP_SIZE) : anchorY;
+          const newW = corner.includes('w') ? anchorX - newX : Math.max(MIN_CROP_SIZE, px - anchorX);
+          const newH = corner.includes('n') ? anchorY - newY : Math.max(MIN_CROP_SIZE, py - anchorY);
+          cropX = Math.max(0, newX);
+          cropY = Math.max(0, newY);
+          cropW = Math.min(newW, 1 - cropX);
+          cropH = Math.min(newH, 1 - cropY);
+          renderFacecamBox();
+        }
+        function onUp(){
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+          scheduleRestyle();
+        }
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      });
     });
 
     // ===== Top text (pinned title with per-word color) =====
@@ -2371,8 +2433,13 @@
         // at generate/reclip time. Backend defaults ("none"/"end") cover
         // omitting them here.
         typing_sound: document.getElementById('typingSoundToggle').checked,
-        pan_x: panX,
-        pan_y: panY,
+        // crop_w <= 0 tells the backend "no manual crop, use the default
+        // auto-centered 9:16 crop" — only send real box values when
+        // Facecam crop mode is actually turned on.
+        crop_x: facecamEnabled ? cropX : 0,
+        crop_y: facecamEnabled ? cropY : 0,
+        crop_w: facecamEnabled ? cropW : 0,
+        crop_h: facecamEnabled ? cropH : 1,
         top_text: topTextInput.value.trim(),
         top_text_colors: topTextColors,
       };
