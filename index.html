@@ -1203,6 +1203,7 @@
             <span class="time" id="timeTotal">0:12</span>
           </div>
           <div id="clipSwitcher" style="display:none;flex-wrap:wrap;gap:8px;margin-top:14px;width:100%;max-width:250px;"></div>
+          <div id="restyleSyncStatus" style="display:none;font-size:11.5px;color:var(--iron);margin-top:6px;"></div>
           <button type="button" class="reclip-btn" id="reclipBtn" style="display:none;">↻ Try a different moment</button>
         </div>
         <div class="editor-tools">
@@ -3271,55 +3272,92 @@
       clearTimeout(restyleTimer);
       restyleTimer = setTimeout(applyRestyle, 700);
     }
+    async function renderOneClip(clip, opts, clipSeconds, voiceover, voiceoverVoice){
+      const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/reclip`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(300000),
+        body: JSON.stringify({
+          job_id: currentJobId, start: clip.start, clip_seconds: clipSeconds,
+          voiceover, voiceover_voice: voiceoverVoice,
+          ...opts,
+        }),
+      });
+      if(!res.ok){
+        const err = await res.json().catch(()=>({detail:'Unknown error'}));
+        throw new Error(err.detail || 'Could not update clip');
+      }
+      return res.json();
+    }
+    const restyleSyncStatus = document.getElementById('restyleSyncStatus');
+    // Bumped every time a new restyle starts — lets a still-running
+    // background sync loop (see below) detect it's been superseded by a
+    // newer edit and quietly stop, instead of racing to overwrite a clip
+    // with stale settings after the user already moved on.
+    let restyleGeneration = 0;
     async function applyRestyle(){
       if(!currentJobId || currentRealClipIndex < 0) return;
       if(!checkUsageAllowed(currentJobSource)) return;
+      const myGeneration = ++restyleGeneration;
+      const clipSeconds = parseInt(document.getElementById('clipSecondsSelect').value, 10);
+      const voiceover = document.getElementById('voiceoverToggle').checked;
+      const voiceoverVoice = document.getElementById('voiceoverVoiceSelect').value;
+      const opts = collectClipOptions();
+      const targetIndex = currentRealClipIndex;
+      const targetClip = realClips[targetIndex];
+      if(!targetClip) return;
+
+      // Render the clip you're actually LOOKING AT first, on its own —
+      // this is the one change that needs to feel instant. Every other
+      // already-generated clip gets the same style synced in the
+      // background afterward (see below), without making you sit through
+      // N full re-encodes just to see the one clip in front of you update.
       status.classList.add('on');
+      statusText.textContent = 'Applying style…';
       try{
-        const clipSeconds = parseInt(document.getElementById('clipSecondsSelect').value, 10);
-        const voiceover = document.getElementById('voiceoverToggle').checked;
-        const voiceoverVoice = document.getElementById('voiceoverVoiceSelect').value;
-        const opts = collectClipOptions();
-        // Re-render EVERY clip already generated in this job with the new
-        // style/effects, not just the one on screen — otherwise switching
-        // to Clip 2/3/4 after tweaking Clip 1 would still show the OLD
-        // look, forcing the exact same setup to be redone per clip. One
-        // style change here now applies uniformly to the whole batch.
-        for(let i = 0; i < realClips.length; i++){
-          const c = realClips[i];
-          statusText.textContent = realClips.length > 1
-            ? `Applying style… (clip ${i + 1} of ${realClips.length})`
-            : 'Applying style…';
-          const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/reclip`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            signal: AbortSignal.timeout(300000),
-            body: JSON.stringify({
-              job_id: currentJobId, start: c.start, clip_seconds: clipSeconds,
-              voiceover, voiceover_voice: voiceoverVoice,
-              ...opts,
-            }),
-          });
-          if(!res.ok){
-            const err = await res.json().catch(()=>({detail:'Unknown error'}));
-            throw new Error(err.detail || `Could not update clip ${i + 1}`);
-          }
-          realClips[i] = await res.json();
-        }
-        // One moment, same sources — no new proxy fetch, so 0 proxy MB.
-        // This whole batch is one user action (one style change), so it
-        // only costs one usage try, not one per clip touched.
+        const newClip = await renderOneClip(targetClip, opts, clipSeconds, voiceover, voiceoverVoice);
+        if(myGeneration !== restyleGeneration) return; // a newer edit already landed — drop this result
+        realClips[targetIndex] = newClip;
+        // One usage try for the whole edit (this clip + whatever syncs to
+        // the others in the background below), not one per clip touched.
         const allowed = await consumeUsageForClips(currentJobSource, 0);
         if(!allowed) return;
         refreshClipPills();
-        showRealClip(currentRealClipIndex, true);
+        showRealClip(targetIndex, true);
         resetSfxPlacementsForClip();
       }catch(err){
         paywallText.textContent = `Couldn't apply that change: ${err.message}`;
         paywallNotice.classList.add('on');
+        return;
       }finally{
         status.classList.remove('on');
       }
+
+      // Background sync to every OTHER already-generated clip so they
+      // pick up the same style too (see the all-clips fix this replaced),
+      // without blocking further interaction — you can keep tweaking
+      // while these catch up, and a newer edit cancels this batch cleanly
+      // via the generation check above/below.
+      const otherIndexes = realClips.map((c, i) => i).filter(i => i !== targetIndex);
+      if(otherIndexes.length === 0) return;
+      restyleSyncStatus.textContent = `Syncing style to ${otherIndexes.length} other clip${otherIndexes.length > 1 ? 's' : ''}…`;
+      restyleSyncStatus.style.display = 'block';
+      for(const i of otherIndexes){
+        if(myGeneration !== restyleGeneration) break; // superseded — stop quietly
+        try{
+          const newClip = await renderOneClip(realClips[i], opts, clipSeconds, voiceover, voiceoverVoice);
+          if(myGeneration !== restyleGeneration) break;
+          realClips[i] = newClip;
+          refreshClipPills();
+          if(currentRealClipIndex === i) showRealClip(i, true);
+        }catch(err){
+          // A background sync failure isn't worth interrupting the user
+          // with a paywall/error banner — that one clip just keeps its
+          // previous look until the next successful edit retries it.
+          console.warn('Clipsmith: background style sync failed for clip', i, err);
+        }
+      }
+      if(myGeneration === restyleGeneration) restyleSyncStatus.style.display = 'none';
     }
     regenVoiceoverBtn.addEventListener('click', async ()=>{
       if(!currentJobId || currentRealClipIndex < 0) return;
