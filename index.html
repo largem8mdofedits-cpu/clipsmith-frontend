@@ -2318,12 +2318,43 @@
     }
     renderFacecamBox();
 
+    // The normal preview shows the already-cropped 9:16 rendered clip — if
+    // a facecam sits in a corner of a wider source video, the default
+    // center-crop may have already cut it out of frame entirely, so
+    // there'd be nothing there to select. While the box is being
+    // positioned, swap the preview to the TRUE uncropped source video
+    // (served by pipeline.py's /source-preview/{job_id}) so the facecam is
+    // actually visible, then switch back to the freshly re-rendered clip
+    // once the box is confirmed.
+    function showSourcePreviewForFacecam(){
+      if(!currentJobId) return;
+      realClipVideo.style.objectFit = 'contain'; // show the FULL frame, not cropped/zoomed
+      const clip = realClips[currentRealClipIndex];
+      const seekTo = clip ? clip.start : 0;
+      realClipVideo.src = `${window.CLIPSMITH_AI_PIPELINE_URL}/source-preview/${currentJobId}`;
+      realClipVideo.style.display = 'block';
+      const onLoaded = ()=>{
+        realClipVideo.currentTime = seekTo;
+        realClipVideo.pause();
+        realClipVideo.removeEventListener('loadedmetadata', onLoaded);
+      };
+      realClipVideo.addEventListener('loadedmetadata', onLoaded);
+    }
+    function restoreRenderedPreview(){
+      realClipVideo.style.objectFit = 'cover';
+      showRealClip(currentRealClipIndex, true);
+    }
     facecamToggleBtn.addEventListener('click', ()=>{
       facecamEnabled = !facecamEnabled;
       facecamOverlay.classList.toggle('on', facecamEnabled);
       facecamToggleBtn.classList.toggle('on', facecamEnabled);
       facecamToggleBtn.textContent = facecamEnabled ? '✓ Done' : '🎯 Facecam crop';
-      scheduleRestyle();
+      if(facecamEnabled){
+        showSourcePreviewForFacecam();
+      }else{
+        restoreRenderedPreview(); // instant visual reset...
+        scheduleRestyle();        // ...then the real re-render with the new crop lands moments later
+      }
     });
 
     // Move the whole box by dragging its body (not a corner handle).
@@ -2344,7 +2375,11 @@
         facecamBox.classList.remove('dragging');
         document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
-        scheduleRestyle();
+        // No re-render here — the preview is currently showing the
+        // uncropped SOURCE video (see showSourcePreviewForFacecam above),
+        // and a mid-adjustment re-render would yank it back to the
+        // rendered clip after every single drag. The real render only
+        // happens once, when "✓ Done" is clicked.
       }
       document.addEventListener('pointermove', onMove);
       document.addEventListener('pointerup', onUp);
@@ -2376,7 +2411,8 @@
         function onUp(){
           document.removeEventListener('pointermove', onMove);
           document.removeEventListener('pointerup', onUp);
-          scheduleRestyle();
+          // Same reasoning as the move handler above — defer the actual
+          // re-render until "✓ Done" is clicked.
         }
         document.addEventListener('pointermove', onMove);
         document.addEventListener('pointerup', onUp);
@@ -2646,6 +2682,7 @@
       if(!clip) return;
       currentRealClipIndex = index;
       const bust = cacheBust ? `?t=${Date.now()}` : '';
+      realClipVideo.style.objectFit = 'cover'; // in case Facecam crop's source-preview mode left this on 'contain'
       realClipVideo.src = `${window.CLIPSMITH_AI_PIPELINE_URL}${clip.url}${bust}`;
       realClipVideo.style.display = 'block';
       playBtn.style.display = 'none';
