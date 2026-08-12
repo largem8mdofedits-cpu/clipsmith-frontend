@@ -552,6 +552,18 @@
   .facecam-handle[data-handle="ne"]{right:-9px;top:-9px;cursor:nesw-resize;}
   .facecam-handle[data-handle="sw"]{left:-9px;bottom:-9px;cursor:nesw-resize;}
   .facecam-handle[data-handle="se"]{right:-9px;bottom:-9px;cursor:nwse-resize;}
+  /* Appears once a facecam crop is confirmed — lets it be nudged up/down
+     within its letterbox padding without reopening the box tool. */
+  .facecam-nudge{
+    position:absolute;top:40px;right:8px;z-index:6;display:none;
+    flex-direction:column;gap:4px;
+  }
+  .facecam-nudge button{
+    width:26px;height:22px;background:rgba(0,0,0,0.55);
+    border:1px solid rgba(255,255,255,0.35);border-radius:4px;
+    color:var(--paper);font-size:11px;cursor:pointer;line-height:1;
+  }
+  .facecam-nudge button:hover{background:var(--ember);border-color:var(--ember);color:#1e1f22;}
   .top-text-words{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
   .top-text-word{
     border:1px solid var(--line-strong);border-radius:4px;padding:4px 9px;font-size:12.5px;
@@ -1121,7 +1133,11 @@
             <video id="realClipVideo" controls playsinline style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;"></video>
             <div class="playbtn" id="playBtn">▶</div>
             <div class="cap-overlay style-bold" id="capOverlay" contenteditable="true" spellcheck="false">okay so here's the thing</div>
-            <button type="button" id="facecamToggleBtn" class="reposition-toggle-btn" style="display:none;" title="Cut a facecam corner and blow it up to fill the frame">🎯 Facecam crop</button>
+            <button type="button" id="facecamToggleBtn" class="reposition-toggle-btn" style="display:none;" title="Cut a facecam corner and fit it into the frame">🎯 Facecam crop</button>
+            <div class="facecam-nudge" id="facecamNudge" style="display:none;">
+              <button type="button" id="facecamNudgeUp" title="Move facecam up">▲</button>
+              <button type="button" id="facecamNudgeDown" title="Move facecam down">▼</button>
+            </div>
             <div class="reposition-overlay" id="facecamOverlay">
               <div class="reposition-hint">Drag to move · drag a corner to resize</div>
               <div class="facecam-box" id="facecamBox">
@@ -2285,30 +2301,44 @@
       // starts with the plain auto-centered crop server-side, so reset the
       // UI to match rather than silently drifting out of sync with what's
       // rendered.
-      facecamEnabled = false;
-      cropX = 0.62; cropY = 0.04; cropW = 0.34; cropH = 0.30;
+      facecamEditing = false;
+      facecamActive = false;
+      cropX = 0.62; cropY = 0.04; cropW = 0.34; cropH = 0.30; facecamOffsetY = 0.5;
       renderFacecamBox();
       facecamOverlay.classList.remove('on');
       facecamToggleBtn.classList.remove('on');
       facecamToggleBtn.textContent = '🎯 Facecam crop';
       facecamToggleBtn.style.display = hasClip ? 'block' : 'none';
+      updateFacecamNudgeVisibility();
     }
 
     // ===== Facecam crop (drag a resizable box over a facecam corner —
-    // that region gets cropped and blown up to fill the whole 1080x1920
-    // output). Replaces the old single-point "reposition" pan control,
-    // which could only slide a fixed 9:16 window around and couldn't
-    // target something as small as a corner facecam. =====
+    // that region gets cropped and fit into the whole 1080x1920 output).
+    // Replaces the old single-point "reposition" pan control, which could
+    // only slide a fixed 9:16 window around and couldn't target something
+    // as small as a corner facecam. =====
     const facecamToggleBtn = document.getElementById('facecamToggleBtn');
     const facecamOverlay = document.getElementById('facecamOverlay');
     const facecamBox = document.getElementById('facecamBox');
-    let facecamEnabled = false;
+    // facecamEditing: the box-selection overlay is currently open (transient
+    // UI state, on while positioning, off once "Done" is clicked).
+    // facecamActive: a facecam crop has been CONFIRMED and should actually
+    // be sent to the backend on render — separate from facecamEditing so
+    // that clicking Done (which turns editing off) doesn't itself blank out
+    // the crop before the render request goes out.
+    let facecamEditing = false;
+    let facecamActive = false;
     // Fractions (0..1) of the SOURCE frame — matches what pipeline.py's
     // crop filter expects directly, no unit conversion needed. Default box
     // sits top-right, the single most common facecam placement in
     // gameplay/stream footage.
     let cropX = 0.62, cropY = 0.04, cropW = 0.34, cropH = 0.30;
+    // Vertical position (0..1, default 0.5=centered) of the facecam WITHIN
+    // the padded output — adjustable after the fact via the nudge buttons,
+    // see facecamNudgeUp/Down below.
+    let facecamOffsetY = 0.5;
     const MIN_CROP_SIZE = 0.08; // stop a resize from collapsing the box to nothing
+    const FACECAM_NUDGE_STEP = 0.12;
 
     function renderFacecamBox(){
       facecamBox.style.left = (cropX * 100) + '%';
@@ -2344,15 +2374,36 @@
       realClipVideo.style.objectFit = 'cover';
       showRealClip(currentRealClipIndex, true);
     }
+    // Small ▲/▼ buttons that appear once a facecam crop is confirmed —
+    // nudge the visible facecam up/down within its letterbox padding
+    // without needing to reopen and re-drag the whole box.
+    const facecamNudge = document.getElementById('facecamNudge');
+    const facecamNudgeUp = document.getElementById('facecamNudgeUp');
+    const facecamNudgeDown = document.getElementById('facecamNudgeDown');
+    function updateFacecamNudgeVisibility(){
+      if(!facecamNudge) return;
+      facecamNudge.style.display = (facecamActive && !facecamEditing && currentRealClipIndex > -1) ? 'flex' : 'none';
+    }
+    if(facecamNudgeUp) facecamNudgeUp.addEventListener('click', ()=>{
+      facecamOffsetY = Math.max(0, facecamOffsetY - FACECAM_NUDGE_STEP);
+      scheduleRestyle();
+    });
+    if(facecamNudgeDown) facecamNudgeDown.addEventListener('click', ()=>{
+      facecamOffsetY = Math.min(1, facecamOffsetY + FACECAM_NUDGE_STEP);
+      scheduleRestyle();
+    });
     facecamToggleBtn.addEventListener('click', ()=>{
-      facecamEnabled = !facecamEnabled;
-      facecamOverlay.classList.toggle('on', facecamEnabled);
-      facecamToggleBtn.classList.toggle('on', facecamEnabled);
-      facecamToggleBtn.textContent = facecamEnabled ? '✓ Done' : '🎯 Facecam crop';
-      if(facecamEnabled){
+      facecamEditing = !facecamEditing;
+      facecamOverlay.classList.toggle('on', facecamEditing);
+      facecamToggleBtn.classList.toggle('on', facecamEditing);
+      facecamToggleBtn.textContent = facecamEditing ? '✓ Done' : '🎯 Facecam crop';
+      if(facecamEditing){
+        updateFacecamNudgeVisibility(); // hide nudge buttons while the box is open — avoid clutter
         showSourcePreviewForFacecam();
       }else{
+        facecamActive = true; // confirm the box the user just positioned
         restoreRenderedPreview(); // instant visual reset...
+        updateFacecamNudgeVisibility();
         scheduleRestyle();        // ...then the real re-render with the new crop lands moments later
       }
     });
@@ -2470,12 +2521,16 @@
         // omitting them here.
         typing_sound: document.getElementById('typingSoundToggle').checked,
         // crop_w <= 0 tells the backend "no manual crop, use the default
-        // auto-centered 9:16 crop" — only send real box values when
-        // Facecam crop mode is actually turned on.
-        crop_x: facecamEnabled ? cropX : 0,
-        crop_y: facecamEnabled ? cropY : 0,
-        crop_w: facecamEnabled ? cropW : 0,
-        crop_h: facecamEnabled ? cropH : 1,
+        // auto-centered 9:16 crop" — only send real box values once a
+        // Facecam crop has actually been confirmed (facecamActive), NOT
+        // just while the editing box happens to be open — that distinction
+        // matters because this function can run right at the moment
+        // editing mode turns off.
+        crop_x: facecamActive ? cropX : 0,
+        crop_y: facecamActive ? cropY : 0,
+        crop_w: facecamActive ? cropW : 0,
+        crop_h: facecamActive ? cropH : 1,
+        facecam_offset_y: facecamOffsetY,
         top_text: topTextInput.value.trim(),
         top_text_colors: topTextColors,
       };
