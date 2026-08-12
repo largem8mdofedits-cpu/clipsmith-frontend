@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invite friends — ViralCut</title>
+<style>
+  :root{color-scheme:dark;--ember-glow:#7983f5;--line:rgba(242,243,245,0.12);}
+  *{box-sizing:border-box;}
+  body{background:#0b0b0d;color:#e8e8e8;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:520px;margin:0 auto;padding:60px 20px;}
+  .back{font-size:13px;color:#888;text-decoration:none;}
+  .back:hover{color:#ccc;}
+  h1{font-size:24px;margin:20px 0 6px;}
+  p.sub{color:#999;font-size:14.5px;line-height:1.5;margin-top:0;}
+  .bonus-pill{display:inline-block;color:var(--ember-glow);font-weight:700;}
+  .card{margin-top:28px;background:#151518;border:1px solid #262629;border-radius:12px;padding:20px;}
+  label{display:block;font-size:12.5px;font-weight:600;color:#999;margin-bottom:8px;}
+  .link-row{display:flex;gap:8px;}
+  input[type=text]{flex:1;padding:12px 14px;background:#1a1a1e;border:1px solid #333;border-radius:8px;color:#fff;font-size:13.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+  button{border:0;border-radius:8px;cursor:pointer;font-weight:600;}
+  .copy-btn{background:var(--ember-glow);color:#fff;padding:0 20px;font-size:14px;flex-shrink:0;}
+  .copy-btn:hover{opacity:0.9;}
+  .share-row{display:flex;gap:10px;margin-top:14px;}
+  .share-btn{flex:1;background:#1f1f24;color:#e8e8e8;padding:11px;font-size:13px;border:1px solid #2c2c31;}
+  .share-btn:hover{background:#26262c;}
+  .stats{margin-top:24px;display:flex;gap:12px;}
+  .stat-box{flex:1;background:#151518;border:1px solid #262629;border-radius:10px;padding:16px;text-align:center;}
+  .stat-num{font-size:22px;font-weight:700;color:var(--ember-glow);}
+  .stat-label{font-size:11.5px;color:#888;margin-top:4px;}
+  .state-box{margin-top:28px;padding:24px;background:#151518;border:1px solid #262629;border-radius:12px;text-align:center;color:#999;font-size:14px;}
+  .state-box a{color:var(--ember-glow);font-weight:600;text-decoration:none;}
+  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#1a1a1e;border:1px solid var(--line);border-radius:8px;padding:10px 18px;font-size:13px;color:#fff;display:none;}
+  .how-it-works{margin-top:28px;font-size:13px;color:#888;line-height:1.7;}
+  .how-it-works b{color:#ccc;}
+</style>
+</head>
+<body>
+  <a href="index.html" class="back">← Back to ViralCut</a>
+  <h1>Invite friends, earn free uploads</h1>
+  <p class="sub">Share your link. When someone signs up through it <b>and verifies their email</b>, you both get <span class="bonus-pill">+5 free uploads</span> added to your current window.</p>
+
+  <div id="signedOutBox" class="state-box" style="display:none;">
+    Sign in to get your personal invite link.<br><br>
+    <a href="index.html">Go to ViralCut →</a>
+  </div>
+
+  <div id="loadingBox" class="state-box">Loading your invite link…</div>
+
+  <div id="inviteContent" style="display:none;">
+    <div class="card">
+      <label>Your invite link</label>
+      <div class="link-row">
+        <input type="text" id="referralLinkInput" readonly>
+        <button type="button" class="copy-btn" id="copyBtn">Copy</button>
+      </div>
+      <div class="share-row">
+        <button type="button" class="share-btn" id="shareBtn">Share…</button>
+        <button type="button" class="share-btn" id="tweetBtn">Share on X</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-box">
+        <div class="stat-num" id="bonusCount">0</div>
+        <div class="stat-label">bonus uploads earned</div>
+      </div>
+    </div>
+
+    <div class="how-it-works">
+      <b>How it works:</b><br>
+      1. Share your link with a friend.<br>
+      2. They sign up and verify their email.<br>
+      3. You both instantly get +5 free uploads for the current 4-day window.<br>
+      No limit on how many friends you can invite.
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+<script src="config.js"></script>
+<script>
+  const BACKEND_URL = window.CLIPSMITH_BACKEND_URL;
+  function getToken(){ return localStorage.getItem('clipsmith_token'); }
+  function clearToken(){ localStorage.removeItem('clipsmith_token'); }
+
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    setTimeout(()=>{ t.style.display = 'none'; }, 2500);
+  }
+
+  async function init(){
+    const token = getToken();
+    if(!token){
+      document.getElementById('loadingBox').style.display = 'none';
+      document.getElementById('signedOutBox').style.display = 'block';
+      return;
+    }
+    try{
+      const res = await fetch(`${BACKEND_URL}/api/me`, { headers: { Authorization: `Bearer ${token}` } });
+      if(res.status === 401){
+        clearToken();
+        document.getElementById('loadingBox').style.display = 'none';
+        document.getElementById('signedOutBox').style.display = 'block';
+        return;
+      }
+      if(!res.ok) throw new Error('Could not load your account');
+      const user = await res.json();
+      document.getElementById('loadingBox').style.display = 'none';
+
+      if(!user.referralLink){
+        document.getElementById('loadingBox').style.display = 'none';
+        document.getElementById('signedOutBox').style.display = 'block';
+        document.getElementById('signedOutBox').innerHTML = 'Your invite link isn\'t ready yet — try refreshing in a moment.';
+        return;
+      }
+
+      document.getElementById('inviteContent').style.display = 'block';
+      document.getElementById('referralLinkInput').value = user.referralLink;
+      document.getElementById('bonusCount').textContent = user.bonusFreeUploads || 0;
+
+      document.getElementById('copyBtn').addEventListener('click', async ()=>{
+        try{
+          await navigator.clipboard.writeText(user.referralLink);
+          showToast('Link copied!');
+        }catch(err){
+          document.getElementById('referralLinkInput').select();
+        }
+      });
+
+      const shareText = `Cut viral clips from any video with ViralCut — I get free uploads if you sign up with my link:`;
+      document.getElementById('shareBtn').addEventListener('click', async ()=>{
+        if(navigator.share){
+          try{ await navigator.share({ title: 'ViralCut', text: shareText, url: user.referralLink }); }
+          catch(err){ /* user cancelled — fine */ }
+        }else{
+          try{ await navigator.clipboard.writeText(user.referralLink); showToast('Link copied — paste it anywhere!'); }
+          catch(err){ document.getElementById('referralLinkInput').select(); }
+        }
+      });
+      document.getElementById('tweetBtn').addEventListener('click', ()=>{
+        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(user.referralLink)}`;
+        window.open(url, '_blank', 'noopener,noreferrer');
+      });
+    }catch(err){
+      document.getElementById('loadingBox').textContent = 'Could not load your invite link — try refreshing.';
+    }
+  }
+  init();
+</script>
+</body>
+</html>
