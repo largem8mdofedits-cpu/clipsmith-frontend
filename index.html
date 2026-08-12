@@ -809,7 +809,7 @@
       <a href="#faq">FAQ</a>
     </nav>
     <div class="nav-cta">
-      <a href="javascript:void(0)" class="nav-signin" id="navInviteLink" onclick="openReferralModal()" style="display:none;">🎁 Invite</a>
+      <a href="invite.html" class="nav-signin" id="navInviteLink" style="display:none;">🎁 Invite</a>
       <a href="javascript:void(0)" class="nav-signin" id="navAuthLink" onclick="openAuthModal('login')">Sign in</a>
       <a href="#pricing" class="btn btn-primary">Start free</a>
     </div>
@@ -860,20 +860,6 @@
       <button type="submit" class="btn btn-primary btn-block">Create account</button>
       <div class="modal-note">Includes 10 free clip generations from uploaded video, no card needed. YouTube-link clipping requires a plan. We'll send a one-time email to verify your address.</div>
     </form>
-  </div>
-</div>
-<!-- REFERRAL MODAL -->
-<div class="modal-overlay" id="referralModal">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeReferralModal()">✕</button>
-    <h3 style="margin:0 0 6px;">Invite a friend, get +5 free uploads</h3>
-    <p style="color:var(--muted,#999);font-size:13px;margin:0 0 16px;">When they sign up and verify their email, you both get <b style="color:var(--ember-glow);">+5 free uploads</b> added to your current window.</p>
-    <label style="display:block;font-size:12.5px;font-weight:600;color:var(--muted,#999);margin-bottom:6px;">Your referral link</label>
-    <div style="display:flex;gap:8px;">
-      <input type="text" id="referralLinkInput" readonly style="flex:1;font-family:var(--font-mono);font-size:12.5px;">
-      <button type="button" class="btn btn-primary" id="copyReferralBtn" style="width:auto;flex-shrink:0;padding:0 16px;">Copy</button>
-    </div>
-    <div style="margin-top:12px;font-size:12.5px;color:var(--muted,#999);" id="referralBonusStatus"></div>
   </div>
 </div>
 <div class="ruler">
@@ -2955,32 +2941,9 @@
   }
   function closeAuthModal(){ authModal.classList.remove('on'); }
   authModal.addEventListener('click', (e)=>{ if(e.target === authModal) closeAuthModal(); });
-  // ===== Referral modal =====
-  const referralModal = document.getElementById('referralModal');
-  function openReferralModal(){
-    if(!currentUser || !currentUser.referralLink) return;
-    document.getElementById('referralLinkInput').value = currentUser.referralLink;
-    document.getElementById('referralBonusStatus').textContent = currentUser.bonusFreeUploads > 0
-      ? `You've earned +${currentUser.bonusFreeUploads} bonus uploads so far from referrals.`
-      : '';
-    referralModal.classList.add('on');
-  }
-  function closeReferralModal(){ referralModal.classList.remove('on'); }
-  if(referralModal) referralModal.addEventListener('click', (e)=>{ if(e.target === referralModal) closeReferralModal(); });
-  const copyReferralBtn = document.getElementById('copyReferralBtn');
-  if(copyReferralBtn){
-    copyReferralBtn.addEventListener('click', async ()=>{
-      const input = document.getElementById('referralLinkInput');
-      try{
-        await navigator.clipboard.writeText(input.value);
-        const original = copyReferralBtn.textContent;
-        copyReferralBtn.textContent = 'Copied!';
-        setTimeout(()=>{ copyReferralBtn.textContent = original; }, 1500);
-      }catch(err){
-        input.select();
-      }
-    });
-  }
+  // Referral link itself now lives on its own page (invite.html) — the nav
+  // "🎁 Invite" link just points straight there, since login redirects to
+  // dashboard.html and a modal parked on the homepage was easy to miss.
   // Captures ?ref=CODE from an invite link into localStorage so it survives
   // navigating to the signup form, then gets attached to the signup request
   // (see the signupForm submit handler below). Doesn't overwrite an existing
