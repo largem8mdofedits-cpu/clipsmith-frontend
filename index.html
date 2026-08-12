@@ -2342,7 +2342,24 @@
     // (each clip has its own independent set of effects) and shows/hides
     // the timeline depending on whether there's a real clip_file to
     // target yet.
-    function resetSfxTimelineForClip(){
+    // Lighter reset — sound-effect placements + gameplay-background toggle
+    // ONLY. Use this after anything that re-renders/replaces the clip
+    // FILE without the user having deliberately changed the facecam crop:
+    // applying a style/effect, reclipping to a new moment, switching to a
+    // different already-generated clip, or regenerating voice-over. Sfx
+    // and gameplay-bg are layered onto the file via a SEPARATE call after
+    // the fact, so a fresh /reclip render genuinely no longer has them —
+    // resetting their UI to match reality is correct here.
+    //
+    // Facecam/PIP crop is NOT reset by this — unlike sfx/gameplay-bg, it's
+    // baked directly INTO every /reclip render via collectClipOptions(),
+    // so it's still present in the file and should stay reflected in the
+    // UI. Wiping it here was the bug behind two real complaints: the
+    // facecam crop vanishing the instant any OTHER control (like caption
+    // style) was changed, and the PIP bubble snapping back to its default
+    // top-right spot right after every drag (the drag's own re-render
+    // triggered this same reset, undoing the very position just set).
+    function resetSfxPlacementsForClip(){
       sfxPlacements = [];
       sfxUndoStack = [];
       sfxRedoStack = [];
@@ -2358,15 +2375,24 @@
       sfxTimeReadout.style.display = 'none';
       renderSfxMarkers();
       if(hasClip) renderSfxTimeTicks();
-      // Gameplay split-screen is also a per-clip toggle (see
-      // applyGameplayBgToggle) — reset it here too rather than duplicate
-      // this same set of call sites a second time.
       gameplayBgToggle.checked = false;
       updateGameplayBgToggleAvailability();
-      // Facecam crop is also per-clip — a freshly (re)generated clip always
-      // starts with the plain auto-centered crop server-side, so reset the
-      // UI to match rather than silently drifting out of sync with what's
-      // rendered.
+      // Facecam VALUES aren't touched, but the toggle button/PIP-bubble
+      // visibility still needs to reflect whichever clip is now on screen
+      // (e.g. hidden entirely once there's no clip at all).
+      facecamToggleBtn.style.display = hasClip ? 'block' : 'none';
+      updatePipPositionVisibility();
+    }
+    // Full reset — sfx/gameplay-bg (via resetSfxPlacementsForClip above)
+    // PLUS the facecam/PIP crop itself. Use this ONLY when the underlying
+    // video is genuinely different: leaving real-clip mode entirely, or
+    // starting a brand new job. A fresh job has no facecam confirmed yet
+    // (server-side default is the plain auto-centered crop), so the UI
+    // should match that rather than carry over a crop that made sense for
+    // a completely different video.
+    function resetSfxTimelineForClip(){
+      resetSfxPlacementsForClip();
+      const hasClip = currentRealClipIndex > -1;
       facecamEditing = false;
       facecamActive = false;
       cropX = 0.62; cropY = 0.04; cropW = 0.34; cropH = 0.30;
@@ -2946,7 +2972,7 @@
         const pill = document.createElement('button');
         pill.className = 'clip-pill';
         pill.textContent = `Clip ${i+1} · ${fmt(c.start)}–${fmt(c.end)}`;
-        pill.addEventListener('click', ()=> { showRealClip(i); resetSfxTimelineForClip(); });
+        pill.addEventListener('click', ()=> { showRealClip(i); resetSfxPlacementsForClip(); });
         clipSwitcher.appendChild(pill);
       });
       clipSwitcher.style.display = 'flex';
@@ -3017,7 +3043,12 @@
         realClips[currentRealClipIndex] = newClip;
         refreshClipPills();
         showRealClip(currentRealClipIndex, true);
-        resetSfxTimelineForClip();
+        // Light reset only — the facecam crop is typically in the same
+        // spot throughout a video regardless of which moment got picked,
+        // so it carries over to the new moment (it was already included
+        // in the request above via collectClipOptions()); sfx placements
+        // are tied to the old moment's timing and don't carry over.
+        resetSfxPlacementsForClip();
       }catch(err){
         paywallText.textContent = `Couldn't get a different moment: ${err.message}`;
         paywallNotice.classList.add('on');
@@ -3044,36 +3075,46 @@
     async function applyRestyle(){
       if(!currentJobId || currentRealClipIndex < 0) return;
       if(!checkUsageAllowed(currentJobSource)) return;
-      const clip = realClips[currentRealClipIndex];
       status.classList.add('on');
-      statusText.textContent = 'Applying style…';
       try{
         const clipSeconds = parseInt(document.getElementById('clipSecondsSelect').value, 10);
         const voiceover = document.getElementById('voiceoverToggle').checked;
         const voiceoverVoice = document.getElementById('voiceoverVoiceSelect').value;
-        const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/reclip`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: AbortSignal.timeout(300000),
-          body: JSON.stringify({
-            job_id: currentJobId, start: clip.start, clip_seconds: clipSeconds,
-            voiceover, voiceover_voice: voiceoverVoice,
-            ...collectClipOptions(),
-          }),
-        });
-        if(!res.ok){
-          const err = await res.json().catch(()=>({detail:'Unknown error'}));
-          throw new Error(err.detail || 'Could not update the clip');
+        const opts = collectClipOptions();
+        // Re-render EVERY clip already generated in this job with the new
+        // style/effects, not just the one on screen — otherwise switching
+        // to Clip 2/3/4 after tweaking Clip 1 would still show the OLD
+        // look, forcing the exact same setup to be redone per clip. One
+        // style change here now applies uniformly to the whole batch.
+        for(let i = 0; i < realClips.length; i++){
+          const c = realClips[i];
+          statusText.textContent = realClips.length > 1
+            ? `Applying style… (clip ${i + 1} of ${realClips.length})`
+            : 'Applying style…';
+          const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/reclip`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(300000),
+            body: JSON.stringify({
+              job_id: currentJobId, start: c.start, clip_seconds: clipSeconds,
+              voiceover, voiceover_voice: voiceoverVoice,
+              ...opts,
+            }),
+          });
+          if(!res.ok){
+            const err = await res.json().catch(()=>({detail:'Unknown error'}));
+            throw new Error(err.detail || `Could not update clip ${i + 1}`);
+          }
+          realClips[i] = await res.json();
         }
-        const newClip = await res.json();
-        // Same moment, same source — no new proxy fetch, so 0 proxy MB,
-        // but it still counts as a usage try like any other render.
+        // One moment, same sources — no new proxy fetch, so 0 proxy MB.
+        // This whole batch is one user action (one style change), so it
+        // only costs one usage try, not one per clip touched.
         const allowed = await consumeUsageForClips(currentJobSource, 0);
         if(!allowed) return;
-        realClips[currentRealClipIndex] = newClip;
         refreshClipPills();
         showRealClip(currentRealClipIndex, true);
-        resetSfxTimelineForClip();
+        resetSfxPlacementsForClip();
       }catch(err){
         paywallText.textContent = `Couldn't apply that change: ${err.message}`;
         paywallNotice.classList.add('on');
@@ -3110,8 +3151,10 @@
         // invalidates the cached "clean" baseline /apply-sound-effects
         // mixes from) — any sound effects placed before this point no
         // longer reflect what's actually in the file, so clear them here
-        // too rather than leave stale markers on screen.
-        resetSfxTimelineForClip();
+        // too rather than leave stale markers on screen. This only
+        // touches audio, so the facecam/PIP crop is untouched — light
+        // reset only.
+        resetSfxPlacementsForClip();
       }catch(err){
         paywallText.textContent = `Voice-over error: ${err.message}`;
         paywallNotice.classList.add('on');
