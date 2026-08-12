@@ -2913,10 +2913,13 @@
           genBtn.disabled = false;
           workspace.classList.add('on');
           timelineEl.style.display = 'none'; // real clips are already trimmed/finished
-          // Only a YouTube-sourced job actually pulled bytes through the
-          // proxy — an upload's source_bytes is the user's own file, not
-          // proxy traffic, so it's never reported as proxyMbUsed.
-          const proxyMbUsed = data.is_youtube ? (data.source_bytes || 0) / (1024*1024) : 0;
+          // billable_proxy_bytes (from pipeline.py) is only nonzero when the
+          // download genuinely went through the paid Decodo proxy — a cache
+          // hit, the free tier, or your own proxy all cost $0, so they're
+          // reported as 0 here too. This is what keeps testing (or any job
+          // the free tier handles fine) from eating into the site-wide
+          // proxy dollar budget before you've even bought Decodo.
+          const proxyMbUsed = (data.billable_proxy_bytes || 0) / (1024*1024);
           const allowed = await consumeUsageForClips(source, proxyMbUsed, data.source_minutes || 0);
           if(!allowed) return;
           enterRealMode(clips, data.job_id);
