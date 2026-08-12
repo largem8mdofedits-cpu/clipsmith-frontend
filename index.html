@@ -815,6 +815,12 @@
     <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
   </div>
 </header>
+<div id="verifyBanner" style="display:none;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;background:rgba(121,131,245,0.12);border-bottom:1px solid var(--line);padding:10px 16px;font-size:13px;text-align:center;">
+  <span id="verifyBannerText">⚠️ Verify your email to use your free uploads — check your inbox for the link.</span>
+  <button type="button" id="resendVerifyBtn" style="background:var(--ember-glow);color:#fff;border:0;border-radius:6px;padding:5px 12px;font-size:12.5px;font-weight:600;cursor:pointer;">Resend email</button>
+  <button type="button" id="verifyBannerClose" aria-label="Dismiss" style="background:none;border:0;color:var(--muted,#999);cursor:pointer;font-size:14px;">✕</button>
+</div>
+<div id="verifyToast" style="display:none;position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:999;background:#1a1a1e;border:1px solid var(--line);border-radius:8px;padding:10px 18px;font-size:13px;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div>
 <!-- AUTH MODAL -->
 <div class="modal-overlay" id="authModal">
   <div class="modal-box">
@@ -845,9 +851,13 @@
         <label>Password</label>
         <input type="password" id="signupPassword" required placeholder="At least 8 characters" minlength="8">
       </div>
+      <label class="signup-consent-row" for="signupMarketingOptIn" style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;color:var(--muted,#999);margin-top:10px;cursor:pointer;">
+        <input type="checkbox" id="signupMarketingOptIn" style="margin-top:2px;width:auto;">
+        <span>Send me occasional tips and updates about ViralCut. You can unsubscribe anytime.</span>
+      </label>
       <div class="modal-error" id="signupError"></div>
       <button type="submit" class="btn btn-primary btn-block">Create account</button>
-      <div class="modal-note">Includes 10 free clip generations from uploaded video, no card needed. YouTube-link clipping requires a plan.</div>
+      <div class="modal-note">Includes 10 free clip generations from uploaded video, no card needed. YouTube-link clipping requires a plan. We'll send a one-time email to verify your address.</div>
     </form>
   </div>
 </div>
@@ -2952,7 +2962,7 @@
     }
   }
   async function checkSession(){
-    if(!getToken()){ updateUrlPaidBadge(); if(typeof updatePremiumLocks === 'function') updatePremiumLocks(); return; } // never signed in on this browser — skip the call
+    if(!getToken()){ updateUrlPaidBadge(); if(typeof updatePremiumLocks === 'function') updatePremiumLocks(); updateVerifyBanner(); return; } // never signed in on this browser — skip the call
     try{
       const res = await fetch(`${BACKEND_URL}/api/me`, { headers: authHeaders() });
       if(res.ok){
@@ -2965,19 +2975,79 @@
     }catch(err){ /* backend not running yet — fine, stays signed out */ }
     updateUrlPaidBadge();
     if(typeof updatePremiumLocks === 'function') updatePremiumLocks();
+    updateVerifyBanner();
   }
+  // Free-plan uploads are blocked server-side until the account's email is
+  // verified (see /api/consume-usage in server.js) — this banner is just the
+  // friendly heads-up before someone hits that wall mid-render. Paid plans
+  // already prove address ownership via Stripe, so it's only shown to
+  // unverified free-plan users.
+  let verifyBannerDismissed = false;
+  function updateVerifyBanner(){
+    const banner = document.getElementById('verifyBanner');
+    if(!banner) return;
+    const shouldShow = !!(currentUser && !currentUser.emailVerified && currentUser.plan === 'free' && !verifyBannerDismissed);
+    banner.style.display = shouldShow ? 'flex' : 'none';
+  }
+  const resendVerifyBtn = document.getElementById('resendVerifyBtn');
+  if(resendVerifyBtn){
+    resendVerifyBtn.addEventListener('click', async ()=>{
+      resendVerifyBtn.disabled = true;
+      const original = resendVerifyBtn.textContent;
+      resendVerifyBtn.textContent = 'Sending…';
+      try{
+        const res = await fetch(`${BACKEND_URL}/api/resend-verification`, { method:'POST', headers: authHeaders() });
+        const data = await res.json();
+        document.getElementById('verifyBannerText').textContent = res.ok
+          ? '✅ Verification email sent — check your inbox (and spam folder).'
+          : (data.error || 'Could not resend right now — try again in a moment.');
+      }catch(err){
+        document.getElementById('verifyBannerText').textContent = 'Could not reach the server — try again in a moment.';
+      }finally{
+        resendVerifyBtn.disabled = false;
+        resendVerifyBtn.textContent = original;
+      }
+    });
+  }
+  const verifyBannerClose = document.getElementById('verifyBannerClose');
+  if(verifyBannerClose){
+    verifyBannerClose.addEventListener('click', ()=>{ verifyBannerDismissed = true; updateVerifyBanner(); });
+  }
+  // Handles the redirect back from clicking the link in the verification
+  // email (server.js's GET /api/verify-email sends the browser to
+  // /?verified=1|0|expired). Shows a quick toast, then strips the query
+  // param so refreshing the page doesn't re-show it.
+  (function handleVerifyRedirect(){
+    const params = new URLSearchParams(window.location.search);
+    const verified = params.get('verified');
+    if(!verified) return;
+    const toast = document.getElementById('verifyToast');
+    if(toast){
+      const messages = { '1': '✅ Email verified — you\'re all set.', 'expired': '⚠️ That verification link expired — request a new one from the banner below.', '0': '⚠️ That verification link is invalid or already used.' };
+      toast.textContent = messages[verified] || '';
+      if(toast.textContent){
+        toast.style.display = 'block';
+        setTimeout(()=>{ toast.style.display = 'none'; }, 6000);
+      }
+    }
+    params.delete('verified');
+    const newSearch = params.toString();
+    const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash;
+    window.history.replaceState({}, '', newUrl);
+  })();
   checkSession();
   document.getElementById('signupForm').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const email = document.getElementById('signupEmail').value;
     const password = document.getElementById('signupPassword').value;
+    const marketingOptIn = document.getElementById('signupMarketingOptIn').checked;
     const errEl = document.getElementById('signupError');
     errEl.classList.remove('on');
     try{
       const res = await fetch(`${BACKEND_URL}/api/signup`, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({email, password})
+        body: JSON.stringify({email, password, marketingOptIn})
       });
       const data = await res.json();
       if(!res.ok){ errEl.textContent = data.error || 'Could not create account'; errEl.classList.add('on'); return; }
