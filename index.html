@@ -552,18 +552,24 @@
   .facecam-handle[data-handle="ne"]{right:-9px;top:-9px;cursor:nesw-resize;}
   .facecam-handle[data-handle="sw"]{left:-9px;bottom:-9px;cursor:nesw-resize;}
   .facecam-handle[data-handle="se"]{right:-9px;bottom:-9px;cursor:nwse-resize;}
-  /* Appears once a facecam crop is confirmed — lets it be nudged up/down
-     within its letterbox padding without reopening the box tool. */
-  .facecam-nudge{
-    position:absolute;top:40px;right:8px;z-index:6;display:none;
-    flex-direction:column;gap:4px;
+  /* Appears once a facecam crop is confirmed — a small draggable bubble
+     shown over the RENDERED clip preview (original video as background)
+     marking where the facecam picture-in-picture will sit. Drag it
+     anywhere; the server-side overlay math clamps the position so it can
+     never hang off the edge of the frame regardless of what's sent. */
+  .pip-position-overlay{
+    position:absolute;inset:0;z-index:6;display:none;
   }
-  .facecam-nudge button{
-    width:26px;height:22px;background:rgba(0,0,0,0.55);
-    border:1px solid rgba(255,255,255,0.35);border-radius:4px;
-    color:var(--paper);font-size:11px;cursor:pointer;line-height:1;
+  .pip-position-handle{
+    position:absolute;border:2px solid var(--ember);border-radius:8px;
+    background:rgba(255,255,255,0.10);cursor:grab;touch-action:none;
+    box-shadow:0 2px 12px rgba(0,0,0,0.45);
   }
-  .facecam-nudge button:hover{background:var(--ember);border-color:var(--ember);color:#1e1f22;}
+  .pip-position-handle.dragging{cursor:grabbing;background:rgba(255,255,255,0.22);}
+  .pip-position-hint{
+    position:absolute;top:8px;left:8px;right:8px;font-size:10.5px;color:var(--paper);
+    background:rgba(0,0,0,0.55);border-radius:4px;padding:4px 7px;pointer-events:none;text-align:center;
+  }
   .top-text-words{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
   .top-text-word{
     border:1px solid var(--line-strong);border-radius:4px;padding:4px 9px;font-size:12.5px;
@@ -1133,10 +1139,10 @@
             <video id="realClipVideo" controls playsinline style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;"></video>
             <div class="playbtn" id="playBtn">▶</div>
             <div class="cap-overlay style-bold" id="capOverlay" contenteditable="true" spellcheck="false">okay so here's the thing</div>
-            <button type="button" id="facecamToggleBtn" class="reposition-toggle-btn" style="display:none;" title="Cut a facecam corner and fit it into the frame">🎯 Facecam crop</button>
-            <div class="facecam-nudge" id="facecamNudge" style="display:none;">
-              <button type="button" id="facecamNudgeUp" title="Move facecam up">▲</button>
-              <button type="button" id="facecamNudgeDown" title="Move facecam down">▼</button>
+            <button type="button" id="facecamToggleBtn" class="reposition-toggle-btn" style="display:none;" title="Cut a facecam corner and float it over the video">🎯 Facecam crop</button>
+            <div class="pip-position-overlay" id="pipPositionOverlay" style="display:none;">
+              <div class="pip-position-hint">Drag the bubble to position your facecam</div>
+              <div class="pip-position-handle" id="pipPositionHandle"></div>
             </div>
             <div class="reposition-overlay" id="facecamOverlay">
               <div class="reposition-hint">Drag to move · drag a corner to resize</div>
@@ -2303,13 +2309,14 @@
       // rendered.
       facecamEditing = false;
       facecamActive = false;
-      cropX = 0.62; cropY = 0.04; cropW = 0.34; cropH = 0.30; facecamOffsetY = 0.5;
+      cropX = 0.62; cropY = 0.04; cropW = 0.34; cropH = 0.30;
+      pipX = 0.65; pipY = 0.04;
       renderFacecamBox();
       facecamOverlay.classList.remove('on');
       facecamToggleBtn.classList.remove('on');
       facecamToggleBtn.textContent = '🎯 Facecam crop';
       facecamToggleBtn.style.display = hasClip ? 'block' : 'none';
-      updateFacecamNudgeVisibility();
+      updatePipPositionVisibility();
     }
 
     // ===== Facecam crop (drag a resizable box over a facecam corner —
@@ -2333,12 +2340,22 @@
     // sits top-right, the single most common facecam placement in
     // gameplay/stream footage.
     let cropX = 0.62, cropY = 0.04, cropW = 0.34, cropH = 0.30;
-    // Vertical position (0..1, default 0.5=centered) of the facecam WITHIN
-    // the padded output — adjustable after the fact via the nudge buttons,
-    // see facecamNudgeUp/Down below.
-    let facecamOffsetY = 0.5;
+    // Position (0..1, fraction of the 1080x1920 output canvas) of the
+    // facecam PICTURE-IN-PICTURE bubble's top-left corner, floating over
+    // the original full video — NOT a replacement crop. Defaults to a
+    // small bubble near the top-right, the most common facecam spot.
+    // Adjustable after the fact by dragging the bubble, see the
+    // pip-position drag handlers below.
+    let pipX = 0.65, pipY = 0.04;
+    // Aspect ratio (width/height) of the source video, captured when the
+    // facecam crop box is opened — used only to draw a roughly-accurate
+    // bubble shape in the position-drag UI; the actual render always uses
+    // the real crop dimensions server-side regardless of this estimate.
+    let facecamSourceAspect = 16 / 9;
+    // Must match pipeline.py's PIP_WIDTH_PX / the 1080px-wide output
+    // canvas, so the drag UI's bubble size roughly matches what renders.
+    const PIP_WIDTH_FRAC = 340 / 1080;
     const MIN_CROP_SIZE = 0.08; // stop a resize from collapsing the box to nothing
-    const FACECAM_NUDGE_STEP = 0.12;
 
     function renderFacecamBox(){
       facecamBox.style.left = (cropX * 100) + '%';
@@ -2416,6 +2433,9 @@
         realClipVideo.currentTime = seekTo;
         realClipVideo.pause();
         syncFacecamOverlayToVideoContent();
+        if(realClipVideo.videoWidth && realClipVideo.videoHeight){
+          facecamSourceAspect = realClipVideo.videoWidth / realClipVideo.videoHeight;
+        }
         realClipVideo.removeEventListener('loadedmetadata', onLoaded);
       };
       realClipVideo.addEventListener('loadedmetadata', onLoaded);
@@ -2427,23 +2447,57 @@
       window.removeEventListener('resize', syncFacecamOverlayToVideoContent);
       showRealClip(currentRealClipIndex, true);
     }
-    // Small ▲/▼ buttons that appear once a facecam crop is confirmed —
-    // nudge the visible facecam up/down within its letterbox padding
-    // without needing to reopen and re-drag the whole box.
-    const facecamNudge = document.getElementById('facecamNudge');
-    const facecamNudgeUp = document.getElementById('facecamNudgeUp');
-    const facecamNudgeDown = document.getElementById('facecamNudgeDown');
-    function updateFacecamNudgeVisibility(){
-      if(!facecamNudge) return;
-      facecamNudge.style.display = (facecamActive && !facecamEditing && currentRealClipIndex > -1) ? 'flex' : 'none';
+    // Draggable bubble that appears once a facecam crop is confirmed,
+    // shown over the RENDERED clip preview (original video as the
+    // background — this is a true picture-in-picture, not a replacement).
+    // Drag it anywhere in 2D to reposition the facecam; the server clamps
+    // it so the bubble can never hang off the edge of the frame.
+    const pipPositionOverlay = document.getElementById('pipPositionOverlay');
+    const pipPositionHandle = document.getElementById('pipPositionHandle');
+    function updatePipPositionVisibility(){
+      if(!pipPositionOverlay) return;
+      const show = facecamActive && !facecamEditing && currentRealClipIndex > -1;
+      pipPositionOverlay.style.display = show ? 'block' : 'none';
+      if(show) renderPipPositionHandle();
     }
-    if(facecamNudgeUp) facecamNudgeUp.addEventListener('click', ()=>{
-      facecamOffsetY = Math.max(0, facecamOffsetY - FACECAM_NUDGE_STEP);
-      scheduleRestyle();
-    });
-    if(facecamNudgeDown) facecamNudgeDown.addEventListener('click', ()=>{
-      facecamOffsetY = Math.min(1, facecamOffsetY + FACECAM_NUDGE_STEP);
-      scheduleRestyle();
+    // Sizes the handle to roughly match the real PIP bubble's proportions
+    // (PIP_WIDTH_FRAC wide, height derived from the selected crop's aspect
+    // ratio) so the drag UI is a reasonable visual preview — the actual
+    // render always uses the real crop dimensions regardless of this
+    // estimate, so a slightly-off shape here is purely cosmetic.
+    function renderPipPositionHandle(){
+      if(!pipPositionHandle) return;
+      const cropAspect = (cropW > 0 && cropH > 0) ? (cropH / cropW) : 1;
+      let heightFrac = PIP_WIDTH_FRAC * cropAspect / facecamSourceAspect;
+      heightFrac = Math.max(0.05, Math.min(0.55, heightFrac));
+      pipPositionHandle.style.left = (pipX * 100) + '%';
+      pipPositionHandle.style.top = (pipY * 100) + '%';
+      pipPositionHandle.style.width = (PIP_WIDTH_FRAC * 100) + '%';
+      pipPositionHandle.style.height = (heightFrac * 100) + '%';
+    }
+    pipPositionHandle.addEventListener('pointerdown', (e)=>{
+      e.stopPropagation();
+      pipPositionHandle.setPointerCapture(e.pointerId);
+      pipPositionHandle.classList.add('dragging');
+      const rect = pipPositionOverlay.getBoundingClientRect();
+      const startX = e.clientX, startY = e.clientY;
+      const origX = pipX, origY = pipY;
+      const wFrac = parseFloat(pipPositionHandle.style.width) / 100;
+      const hFrac = parseFloat(pipPositionHandle.style.height) / 100;
+      function onMove(ev){
+        pipX = Math.max(0, Math.min(1 - wFrac, origX + (ev.clientX - startX) / rect.width));
+        pipY = Math.max(0, Math.min(1 - hFrac, origY + (ev.clientY - startY) / rect.height));
+        pipPositionHandle.style.left = (pipX * 100) + '%';
+        pipPositionHandle.style.top = (pipY * 100) + '%';
+      }
+      function onUp(){
+        pipPositionHandle.classList.remove('dragging');
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        scheduleRestyle(); // real re-render lands with the new PIP position
+      }
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
     });
     facecamToggleBtn.addEventListener('click', ()=>{
       facecamEditing = !facecamEditing;
@@ -2451,12 +2505,12 @@
       facecamToggleBtn.classList.toggle('on', facecamEditing);
       facecamToggleBtn.textContent = facecamEditing ? '✓ Done' : '🎯 Facecam crop';
       if(facecamEditing){
-        updateFacecamNudgeVisibility(); // hide nudge buttons while the box is open — avoid clutter
+        updatePipPositionVisibility(); // hide the drag bubble while the box is open — avoid clutter
         showSourcePreviewForFacecam();
       }else{
         facecamActive = true; // confirm the box the user just positioned
         restoreRenderedPreview(); // instant visual reset...
-        updateFacecamNudgeVisibility();
+        updatePipPositionVisibility();
         scheduleRestyle();        // ...then the real re-render with the new crop lands moments later
       }
     });
@@ -2583,7 +2637,10 @@
         crop_y: facecamActive ? cropY : 0,
         crop_w: facecamActive ? cropW : 0,
         crop_h: facecamActive ? cropH : 1,
-        facecam_offset_y: facecamOffsetY,
+        // Facecam PICTURE-IN-PICTURE position (0..1 fraction of the output
+        // canvas) — only takes effect server-side when crop_w > 0 above.
+        pip_x: pipX,
+        pip_y: pipY,
         top_text: topTextInput.value.trim(),
         top_text_colors: topTextColors,
       };
