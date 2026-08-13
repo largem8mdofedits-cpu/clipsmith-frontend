@@ -3105,14 +3105,40 @@
       // no need to fake a render.
       if(currentRealClipIndex > -1 && realClips[currentRealClipIndex]){
         const clip = realClips[currentRealClipIndex];
-        const a = document.createElement('a');
-        a.href = `${window.CLIPSMITH_AI_PIPELINE_URL}${clip.url}`;
-        a.download = clip.file || 'clip.mp4';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        exportDone.textContent = '✓ Downloaded';
-        exportDone.classList.add('on');
+        const prevLabel = exportBtn.textContent;
+        exportBtn.disabled = true;
+        exportBtn.textContent = 'Preparing download…';
+        try{
+          // The <a download> attribute is silently IGNORED by browsers
+          // when href points at a DIFFERENT origin — and the pipeline
+          // service (where clips actually live) is a different origin
+          // than this frontend. So the old direct href="...pipeline.../
+          // clips/x.mp4" click wasn't downloading anything: it was
+          // NAVIGATING the whole tab straight to the raw video, replacing
+          // the editor entirely — exactly the "export opens a new page
+          // and my progress is gone" behavior. Fetching the file first
+          // and downloading it from a same-origin blob: URL instead makes
+          // it a real download and keeps the editor tab intact.
+          const resp = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}${clip.url}`);
+          if(!resp.ok) throw new Error('Could not fetch the clip file from the server.');
+          const blob = await resp.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = clip.file || 'clip.mp4';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(()=> URL.revokeObjectURL(blobUrl), 30000);
+          exportDone.textContent = '✓ Downloaded';
+          exportDone.classList.add('on');
+        }catch(err){
+          paywallText.textContent = `Couldn't download that clip: ${err.message}`;
+          paywallNotice.classList.add('on');
+        }finally{
+          exportBtn.disabled = false;
+          exportBtn.textContent = prevLabel;
+        }
         return;
       }
       exportDone.classList.remove('on');
