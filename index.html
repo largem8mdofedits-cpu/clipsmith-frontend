@@ -3286,7 +3286,9 @@
       realClips.forEach((c,i)=>{
         const pill = document.createElement('button');
         pill.className = 'clip-pill';
-        pill.textContent = `Clip ${i+1} · ${fmt(c.start)}–${fmt(c.end)}`;
+        const syncing = i === currentlySyncingClipIndex;
+        pill.textContent = `${syncing ? '⏳ ' : ''}Clip ${i+1} · ${fmt(c.start)}–${fmt(c.end)}`;
+        if(syncing){ pill.style.opacity = '0.7'; pill.title = 'Syncing this edit to this clip…'; }
         pill.addEventListener('click', ()=> { showRealClip(i); resetSfxPlacementsForClip(); });
         clipSwitcher.appendChild(pill);
       });
@@ -3537,6 +3539,16 @@
     // newer edit and quietly stop, instead of racing to overwrite a clip
     // with stale settings after the user already moved on.
     let restyleGeneration = 0;
+    // Which clip index the background sync loop is rendering RIGHT NOW
+    // (-1 when nothing's syncing) — refreshClipPills() reads this to mark
+    // that one pill as "in progress" so it's obvious at a glance which
+    // clips are done and which one is still catching up.
+    let currentlySyncingClipIndex = -1;
+    // True for the whole background-sync phase (not just the primary
+    // render) — the beforeunload guard below checks this too now, since
+    // leaving mid-sync used to silently strand the other clips on the old
+    // style with no warning at all.
+    let backgroundSyncInFlight = false;
     async function applyRestyle(){
       if(!currentJobId || currentRealClipIndex < 0) return;
       if(!checkUsageAllowed(currentJobSource)) return;
@@ -3555,6 +3567,13 @@
       let resolvePrimary;
       restylePrimaryDone = new Promise(res => { resolvePrimary = res; });
       restyleInFlightFlag = true;
+      // Computed up front (not after the primary render) so the `finally`
+      // block below knows whether a background sync is coming and can
+      // keep the main status pill visible through it instead of flashing
+      // "applied" then silently doing more work — that gap between "looks
+      // done" and "is actually done on every clip" was the confusing part
+      // users kept reporting.
+      const otherIndexes = realClips.map((c, i) => i).filter(i => i !== targetIndex);
 
       // Render the clip you're actually LOOKING AT first, on its own —
       // this is the one change that needs to feel instant. Every other
@@ -3577,9 +3596,9 @@
       }catch(err){
         paywallText.textContent = `Couldn't apply that change: ${err.message}`;
         paywallNotice.classList.add('on');
+        status.classList.remove('on');
         return;
       }finally{
-        status.classList.remove('on');
         restyleInFlightFlag = false;
         resolvePrimary(); // this clip's render has landed (or failed) — safe for Export to proceed now
       }
@@ -3589,26 +3608,64 @@
       // without blocking further interaction — you can keep tweaking
       // while these catch up, and a newer edit cancels this batch cleanly
       // via the generation check above/below.
-      const otherIndexes = realClips.map((c, i) => i).filter(i => i !== targetIndex);
-      if(otherIndexes.length === 0) return;
-      restyleSyncStatus.textContent = `Syncing style to ${otherIndexes.length} other clip${otherIndexes.length > 1 ? 's' : ''}…`;
-      restyleSyncStatus.style.display = 'block';
+      //
+      // The main status pill (top of editor, hard to miss) is kept ON and
+      // relabeled for this whole phase instead of switching off right
+      // after the primary clip — switching off after just one clip is what
+      // made edits look "applied" while 2-3 more clips were still silently
+      // rendering in the background. restyleSyncStatus (the smaller line
+      // under the clip switcher) is also bumped to the accent color with a
+      // live "X of N" counter as a second, more granular signal right next
+      // to the clip pills themselves.
+      if(otherIndexes.length === 0){
+        status.classList.remove('on');
+        return;
+      }
+      status.classList.add('on');
+      restyleSyncStatus.style.cssText = 'display:block;font-size:12px;font-weight:600;color:var(--ember);margin-top:6px;';
+      let syncedSoFar = 0;
+      const updateSyncLabel = () => {
+        const label = `Syncing style to remaining clips… (${syncedSoFar}/${otherIndexes.length})`;
+        statusText.textContent = label;
+        restyleSyncStatus.textContent = label;
+      };
+      updateSyncLabel();
+      backgroundSyncInFlight = true;
       for(const i of otherIndexes){
         if(myGeneration !== restyleGeneration) break; // superseded — stop quietly
+        currentlySyncingClipIndex = i;
+        refreshClipPills();
         try{
           const newClip = await renderOneClip(realClips[i], opts, clipSeconds, voiceover, voiceoverVoice);
           if(myGeneration !== restyleGeneration) break;
           realClips[i] = newClip;
-          refreshClipPills();
           if(currentRealClipIndex === i) showRealClip(i, true);
         }catch(err){
           // A background sync failure isn't worth interrupting the user
           // with a paywall/error banner — that one clip just keeps its
           // previous look until the next successful edit retries it.
           console.warn('Clipsmith: background style sync failed for clip', i, err);
+        }finally{
+          syncedSoFar++;
+          currentlySyncingClipIndex = -1;
+          refreshClipPills();
+          if(myGeneration === restyleGeneration) updateSyncLabel();
         }
       }
-      if(myGeneration === restyleGeneration) restyleSyncStatus.style.display = 'none';
+      backgroundSyncInFlight = false;
+      if(myGeneration === restyleGeneration){
+        restyleSyncStatus.style.display = 'none';
+        statusText.textContent = 'All clips updated ✓';
+        // Brief confirmation instead of just going blank — this is the
+        // actual "yes, every clip really does have this edit now" moment
+        // users were missing. Pill is already 'on' from the sync phase
+        // above; just let it linger a moment before hiding.
+        setTimeout(() => {
+          if(statusText.textContent === 'All clips updated ✓') status.classList.remove('on');
+        }, 1800);
+      } else {
+        status.classList.remove('on');
+      }
     }
     regenVoiceoverBtn.addEventListener('click', async ()=>{
       if(!currentJobId || currentRealClipIndex < 0) return;
@@ -4040,7 +4097,7 @@
   // whole project). Browsers ignore custom text and show their own
   // generic prompt; setting returnValue is what triggers it at all.
   window.addEventListener('beforeunload', (e)=>{
-    if(restyleTimer || restyleInFlightFlag){
+    if(restyleTimer || restyleInFlightFlag || backgroundSyncInFlight){
       e.preventDefault();
       e.returnValue = '';
     }
