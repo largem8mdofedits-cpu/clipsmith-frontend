@@ -3173,6 +3173,7 @@
           document.querySelector('.editor-tab-btn[data-tab="captions"]').click();
         }
       }
+      saveProjectState();
     }
     function refreshClipPills(){
       clipSwitcher.innerHTML = '';
@@ -3184,6 +3185,110 @@
         clipSwitcher.appendChild(pill);
       });
       clipSwitcher.style.display = 'flex';
+    }
+    // ===== Project persistence — survives closing the tab / navigating
+    // away, which previously lost every real clip + edit the moment you
+    // left the editor (nothing was saved anywhere but page memory).
+    // Jobs live on the server ~3 hours (see pipeline.py's
+    // cleanup_old_jobs()/JOB_TTL_SECONDS) before the source video +
+    // transcript behind /reclip are swept, so a restore past that window
+    // will still show/download already-rendered clips but further edits
+    // will fail with "session expired" — same as if the tab had stayed
+    // open that whole time. Rendered clip files themselves aren't on
+    // that sweep, so Download should keep working even then. =====
+    const PROJECT_STORAGE_KEY = 'clipsmith_project_v1';
+    const PROJECT_TTL_MS = 3 * 60 * 60 * 1000; // matches JOB_TTL_SECONDS
+    function saveProjectState(){
+      if(!currentJobId || currentRealClipIndex < 0) return;
+      try{
+        localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify({
+          jobId: currentJobId,
+          jobSource: currentJobSource,
+          clips: realClips,
+          clipIndex: currentRealClipIndex,
+          facecamActive, cropX, cropY, cropW, cropH,
+          pipX, pipY, pipScale,
+          topText: topTextInput.value,
+          topTextColors,
+          captionX, captionY, captionScale,
+          topTextX, topTextY, topTextScale,
+          activeStyle, activeColorPreset,
+          captionUppercase: captionUppercaseToggle ? captionUppercaseToggle.checked : false,
+          captionBold: captionBoldToggle ? captionBoldToggle.checked : false,
+          topTextUppercase: topTextUppercaseToggle ? topTextUppercaseToggle.checked : false,
+          topTextBold: topTextBoldToggle ? topTextBoldToggle.checked : true,
+          zoomPan: document.getElementById('zoomPanToggle').checked,
+          flashIntro: document.getElementById('flashIntroToggle').checked,
+          typingSound: document.getElementById('typingSoundToggle').checked,
+          savedAt: Date.now(),
+        }));
+      }catch(err){ /* localStorage full/unavailable — not worth interrupting the user over */ }
+    }
+    function clearProjectState(){
+      try{ localStorage.removeItem(PROJECT_STORAGE_KEY); }catch(err){ /* ignore */ }
+    }
+    // Best-effort, silent restore on page load. If the underlying files
+    // are actually gone server-side (past the TTL, or a redeploy wiped
+    // the ephemeral volume), the video just fails to load / the next
+    // edit surfaces the normal "session expired" error — no special
+    // handling needed here for that case.
+    function restoreProjectState(){
+      let saved;
+      try{ saved = JSON.parse(localStorage.getItem(PROJECT_STORAGE_KEY) || 'null'); }catch(err){ saved = null; }
+      if(!saved || !saved.jobId || !Array.isArray(saved.clips) || !saved.clips.length) return;
+      if(Date.now() - (saved.savedAt || 0) > PROJECT_TTL_MS){ clearProjectState(); return; }
+
+      currentJobId = saved.jobId;
+      currentJobSource = saved.jobSource || 'upload';
+      realClips = saved.clips;
+      facecamActive = !!saved.facecamActive;
+      if(typeof saved.cropX === 'number') cropX = saved.cropX;
+      if(typeof saved.cropY === 'number') cropY = saved.cropY;
+      if(typeof saved.cropW === 'number') cropW = saved.cropW;
+      if(typeof saved.cropH === 'number') cropH = saved.cropH;
+      if(typeof saved.pipX === 'number') pipX = saved.pipX;
+      if(typeof saved.pipY === 'number') pipY = saved.pipY;
+      if(typeof saved.pipScale === 'number') pipScale = saved.pipScale;
+      topTextInput.value = saved.topText || '';
+      topTextColors = Array.isArray(saved.topTextColors) ? saved.topTextColors : [];
+      renderTopTextWords();
+      if(typeof saved.captionX === 'number') captionX = saved.captionX;
+      if(typeof saved.captionY === 'number') captionY = saved.captionY;
+      if(typeof saved.captionScale === 'number') captionScale = saved.captionScale;
+      if(typeof saved.topTextX === 'number') topTextX = saved.topTextX;
+      if(typeof saved.topTextY === 'number') topTextY = saved.topTextY;
+      if(typeof saved.topTextScale === 'number') topTextScale = saved.topTextScale;
+      if(pipScaleSlider) pipScaleSlider.value = pipScale;
+      if(captionScaleSlider) captionScaleSlider.value = captionScale;
+      if(topTextScaleSlider) topTextScaleSlider.value = topTextScale;
+      if(captionUppercaseToggle) captionUppercaseToggle.checked = !!saved.captionUppercase;
+      if(captionBoldToggle) captionBoldToggle.checked = !!saved.captionBold;
+      if(topTextUppercaseToggle) topTextUppercaseToggle.checked = !!saved.topTextUppercase;
+      if(topTextBoldToggle) topTextBoldToggle.checked = saved.topTextBold !== false;
+      const zpt = document.getElementById('zoomPanToggle'); if(zpt) zpt.checked = !!saved.zoomPan;
+      const fit = document.getElementById('flashIntroToggle'); if(fit) fit.checked = !!saved.flashIntro;
+      const tst = document.getElementById('typingSoundToggle'); if(tst) tst.checked = !!saved.typingSound;
+      if(saved.activeStyle){
+        activeStyle = saved.activeStyle;
+        document.querySelectorAll('.style-card').forEach(s=> s.classList.toggle('active', s.dataset.style === activeStyle));
+      }
+      if(saved.activeColorPreset){
+        activeColorPreset = saved.activeColorPreset;
+        document.querySelectorAll('#colorGradeSwatches .cg-swatch').forEach(s=> s.classList.toggle('active', s.dataset.preset === activeColorPreset));
+      }
+
+      modeBadge.style.display = 'inline-block';
+      refreshClipPills();
+      reclipBtn.style.display = currentJobId ? 'block' : 'none';
+      showRealClip(Math.min(saved.clipIndex || 0, realClips.length - 1));
+      updatePipPositionVisibility();
+      updateCaptionPositionVisibility();
+      updateTopTextPositionVisibility();
+      captionList.innerHTML = '<div style="color:var(--iron);font-size:13.5px;">Captions are already burned into this real clip. Generate again for a different cut.</div>';
+
+      status.classList.add('on');
+      statusText.textContent = '↺ Restored your last project';
+      setTimeout(()=>{ if(statusText.textContent === '↺ Restored your last project') status.classList.remove('on'); }, 3000);
     }
     function enterRealMode(clips, jobId){
       realClips = clips;
@@ -3281,6 +3386,10 @@
     // so a download right after an edit can never silently grab the file
     // from BEFORE that edit was rendered.
     let restylePrimaryDone = Promise.resolve();
+    // Synchronous companion to restylePrimaryDone — a Promise can't be
+    // checked for "still pending" without awaiting it, which the
+    // beforeunload warning below needs to do instantly.
+    let restyleInFlightFlag = false;
     function scheduleRestyle(){
       if(!currentJobId || currentRealClipIndex < 0) return; // nothing rendered yet — next generate will pick this up
       clearTimeout(restyleTimer);
@@ -3339,6 +3448,7 @@
       // from before this edit landed.
       let resolvePrimary;
       restylePrimaryDone = new Promise(res => { resolvePrimary = res; });
+      restyleInFlightFlag = true;
 
       // Render the clip you're actually LOOKING AT first, on its own —
       // this is the one change that needs to feel instant. Every other
@@ -3364,6 +3474,7 @@
         return;
       }finally{
         status.classList.remove('on');
+        restyleInFlightFlag = false;
         resolvePrimary(); // this clip's render has landed (or failed) — safe for Export to proceed now
       }
 
@@ -3817,6 +3928,17 @@
       errEl.classList.add('on');
     }
   });
+  // Warns before leaving while an edit is still debounced-pending or
+  // actively rendering — previously closing/reloading right then silently
+  // dropped that change (and, before restoreProjectState existed, the
+  // whole project). Browsers ignore custom text and show their own
+  // generic prompt; setting returnValue is what triggers it at all.
+  window.addEventListener('beforeunload', (e)=>{
+    if(restyleTimer || restyleInFlightFlag){
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
   // ===== Stripe checkout =====
   async function startCheckout(plan, clicked){
     const billing = btnY.classList.contains('active') ? 'yearly' : 'monthly';
@@ -3843,6 +3965,7 @@
       clicked.style.pointerEvents = '';
     }
   }
+  restoreProjectState();
 </script>
 </body>
 </html>
