@@ -1797,6 +1797,17 @@
         });
         if(!res.ok){
           const err = await res.json().catch(()=>({detail:'Unknown error'}));
+          // A restored project (see restoreProjectState()) can point at a
+          // job whose server-side files are actually gone — past the
+          // ~3-hour TTL, or wiped by a redeploy's fresh container. That
+          // surfaces here as a 404 ("session expired"). Silently leaving
+          // the stale currentJobId in place would make every future
+          // action in this session fail the exact same confusing way, so
+          // clear the saved project — the next generate starts clean.
+          if(res.status === 404){
+            clearProjectState();
+            throw new Error('This project has expired server-side — generate your clips again, then re-add the music.');
+          }
           throw new Error(err.detail || 'Could not upload music');
         }
       }catch(err){
