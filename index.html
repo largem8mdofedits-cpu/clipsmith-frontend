@@ -1803,6 +1803,7 @@
         console.warn('Clipsmith: background music upload failed.', err);
         paywallText.textContent = `Couldn't upload that music file: ${err.message}`;
         paywallNotice.classList.add('on');
+        throw err; // let the caller know it failed too, so it doesn't schedule a restyle on a track that never made it to the server
       }
     }
     musicUploadTriggerBtn.addEventListener('click', ()=> musicFileInput.click());
@@ -1815,8 +1816,21 @@
       musicUploadFilenameText.textContent = f.name;
       musicUploadFilename.classList.add('on');
       if(currentJobId){
-        await uploadMusicIfNeeded();
-        scheduleRestyle();
+        // Uploading + the render that mixes it in can take a few seconds —
+        // without this, picking a track looked like it did nothing until
+        // "Applying style…" appeared a moment later (same class of issue
+        // as the facecam/download bugs from earlier today).
+        status.classList.add('on');
+        statusText.textContent = 'Uploading music…';
+        try{
+          await uploadMusicIfNeeded();
+          scheduleRestyle();
+        }catch(err){
+          // uploadMusicIfNeeded() already surfaced the error banner —
+          // just make sure the status pill doesn't get stuck showing
+          // "Uploading music…" after a failure.
+          status.classList.remove('on');
+        }
       }
     });
     clearMusicBtn.addEventListener('click', async ()=>{
@@ -2115,6 +2129,35 @@
     // YouTube-link access is the one thing actually enforced server-side
     // (it's the one thing that costs real proxy bandwidth); cosmetic
     // render options are gated at the UI layer only.
+    // How many clips a single generate/upload can produce, per plan.
+    // Rendering itself is cheap on Railway's usage-based pricing (a clip
+    // render is roughly 2 vCPU x ~20-40s, well under a cent even at
+    // Elite's batch size — see PLAN_EST_COST in server.js for the actual
+    // line item), so this is a genuine value-add lever, not something
+    // gated by render cost. The real constraint is that every clip on
+    // the whole site renders one at a time through a single shared lock
+    // (see HEAVY_TASK_LOCK in pipeline.py), so a bigger batch takes
+    // proportionally longer to fully land — free/starter stay at
+    // today's cap, paid plans get more.
+    const CLIP_COUNT_MAX_BY_PLAN = { free: 4, starter: 4, pro: 6, elite: 8 };
+    function updateClipCountOptions(){
+      const sel = document.getElementById('clipCountSelect');
+      if(!sel) return;
+      const plan = (currentUser && currentUser.plan) || 'free';
+      const max = CLIP_COUNT_MAX_BY_PLAN[plan] || CLIP_COUNT_MAX_BY_PLAN.free;
+      const prevValue = parseInt(sel.value, 10) || 2;
+      sel.innerHTML = '';
+      for(let n = 1; n <= max; n++){
+        const opt = document.createElement('option');
+        opt.value = String(n);
+        opt.textContent = `${n} clip${n > 1 ? 's' : ''}`;
+        if(n === Math.min(prevValue, max)) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      sel.title = max < CLIP_COUNT_MAX_BY_PLAN.elite
+        ? `Up to ${max} clips per batch on your plan — higher plans generate more at once.`
+        : 'Number of clips';
+    }
     function updatePremiumLocks(){
       const isPaid = !!(currentUser && currentUser.plan !== 'free');
       document.querySelectorAll('[data-premium="1"]').forEach(el=>{
@@ -2127,6 +2170,7 @@
       const gpLock = document.getElementById('gameplayBgLock');
       if(gpLock) gpLock.classList.toggle('on', !isPaid);
       if(typeof updateGameplayBgToggleAvailability === 'function') updateGameplayBgToggleAvailability();
+      updateClipCountOptions();
     }
     function showPremiumPaywall(msg){
       paywallText.textContent = msg || "That's a paid-plan feature — subscribe to unlock the extra caption styles and color grading looks.";
@@ -3363,7 +3407,7 @@
       // there was no job yet to upload it to — send it now and restyle
       // the clip on screen so it's actually mixed in.
       if(selectedMusicFile && currentJobId){
-        uploadMusicIfNeeded().then(scheduleRestyle);
+        uploadMusicIfNeeded().then(scheduleRestyle).catch(()=>{}); // error already surfaced inside uploadMusicIfNeeded()
       }
       if(selectedGameplayBgFile && currentJobId){
         uploadGameplayBgIfNeeded();
