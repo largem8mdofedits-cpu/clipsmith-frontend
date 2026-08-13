@@ -3068,6 +3068,14 @@
       // new (usage was already recorded when it was generated) — this gate
       // really only matters for the demo-fallback simulated render below.
       if(!checkUsageAllowed('upload')) return;
+      // Flush any pending/in-flight style, facecam, or title edit first —
+      // otherwise clicking Download right after a tweak could silently
+      // grab the clip from BEFORE that edit was rendered in.
+      if(currentRealClipIndex > -1){
+        exportBtn.disabled = true;
+        await flushPendingRestyle();
+        exportBtn.disabled = false;
+      }
       // Real clip already exists on disk from the pipeline — just download it,
       // no need to fake a render.
       if(currentRealClipIndex > -1 && realClips[currentRealClipIndex]){
@@ -3267,10 +3275,29 @@
     // Debounced so rapid swatch-clicking coalesces into one render
     // instead of burning a usage "try" per click.
     let restyleTimer = null;
+    // Resolves once the CURRENTLY-VIEWED clip's latest style/facecam/title
+    // edit has actually landed in realClips — starts pre-resolved (nothing
+    // pending). Export/Download awaits this (see flushPendingRestyle below)
+    // so a download right after an edit can never silently grab the file
+    // from BEFORE that edit was rendered.
+    let restylePrimaryDone = Promise.resolve();
     function scheduleRestyle(){
       if(!currentJobId || currentRealClipIndex < 0) return; // nothing rendered yet — next generate will pick this up
       clearTimeout(restyleTimer);
       restyleTimer = setTimeout(applyRestyle, 700);
+    }
+    // Forces any debounced-but-not-yet-fired edit to fire NOW, and waits
+    // for the currently-viewed clip's render (not the background sync to
+    // other clips) to finish either way. Callers like Export use this to
+    // guarantee they never download a stale pre-edit file.
+    async function flushPendingRestyle(){
+      if(restyleTimer){
+        clearTimeout(restyleTimer);
+        restyleTimer = null;
+        await applyRestyle();
+      } else {
+        await restylePrimaryDone;
+      }
     }
     async function renderOneClip(clip, opts, clipSeconds, voiceover, voiceoverVoice){
       const res = await fetch(`${window.CLIPSMITH_AI_PIPELINE_URL}/reclip`, {
@@ -3307,6 +3334,12 @@
       const targetClip = realClips[targetIndex];
       if(!targetClip) return;
 
+      // From here on this edit is "in flight" for the visible clip —
+      // flushPendingRestyle()/Export awaits this so it can't grab a file
+      // from before this edit landed.
+      let resolvePrimary;
+      restylePrimaryDone = new Promise(res => { resolvePrimary = res; });
+
       // Render the clip you're actually LOOKING AT first, on its own —
       // this is the one change that needs to feel instant. Every other
       // already-generated clip gets the same style synced in the
@@ -3331,6 +3364,7 @@
         return;
       }finally{
         status.classList.remove('on');
+        resolvePrimary(); // this clip's render has landed (or failed) — safe for Export to proceed now
       }
 
       // Background sync to every OTHER already-generated clip so they
