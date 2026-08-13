@@ -2097,6 +2097,10 @@
     // tabs
     document.querySelectorAll('.editor-tab-btn').forEach(btn=>{
       btn.addEventListener('click', ()=>{
+        // Leaving the Facecam crop tool any way other than its own "Done"
+        // button previously abandoned the edit silently — see
+        // confirmFacecamEditIfOpen()'s comment above.
+        if(typeof confirmFacecamEditIfOpen === 'function') confirmFacecamEditIfOpen();
         document.querySelectorAll('.editor-tab-btn').forEach(b=>b.classList.remove('active'));
         document.querySelectorAll('.editor-panel').forEach(p=>p.classList.remove('active'));
         btn.classList.add('active');
@@ -2674,28 +2678,45 @@
       document.addEventListener('pointermove', onMove);
       document.addEventListener('pointerup', onUp);
     });
+    // Confirms whatever crop box position is currently drawn — the ONLY
+    // place facecamActive actually becomes true. Pulled out of the toggle
+    // button's click handler so OTHER ways of leaving the crop tool
+    // (switching editor tabs, clicking Export) can call it too instead of
+    // silently abandoning the edit — previously doing anything other than
+    // clicking this exact button again left facecamEditing stuck true and
+    // facecamActive false, so the render that eventually fired sent
+    // crop_w=0 (no facecam) with no error and no visual sign anything was
+    // wrong.
+    function confirmFacecamEditIfOpen(){
+      if(!facecamEditing) return;
+      facecamEditing = false;
+      facecamActive = true; // confirm the box the user just positioned
+      facecamOverlay.classList.remove('on');
+      facecamToggleBtn.classList.remove('on');
+      facecamToggleBtn.textContent = '🎯 Facecam crop';
+      restoreRenderedPreview(); // instant visual reset...
+      updatePipPositionVisibility();
+      updateCaptionPositionVisibility();
+      updateTopTextPositionVisibility();
+      scheduleRestyle();        // ...then the real re-render with the new crop lands moments later
+    }
     facecamToggleBtn.addEventListener('click', ()=>{
-      facecamEditing = !facecamEditing;
-      facecamOverlay.classList.toggle('on', facecamEditing);
-      facecamToggleBtn.classList.toggle('on', facecamEditing);
-      facecamToggleBtn.textContent = facecamEditing ? '✓ Done' : '🎯 Facecam crop';
       if(facecamEditing){
-        // Hide ALL THREE drag pins/bubbles while the crop box is open —
-        // avoids four overlapping draggables cluttering a small preview
-        // at once (the source-preview swap below also changes the video
-        // underneath entirely, so the other pins wouldn't line up anyway).
-        updatePipPositionVisibility();
-        updateCaptionPositionVisibility();
-        updateTopTextPositionVisibility();
-        showSourcePreviewForFacecam();
-      }else{
-        facecamActive = true; // confirm the box the user just positioned
-        restoreRenderedPreview(); // instant visual reset...
-        updatePipPositionVisibility();
-        updateCaptionPositionVisibility();
-        updateTopTextPositionVisibility();
-        scheduleRestyle();        // ...then the real re-render with the new crop lands moments later
+        confirmFacecamEditIfOpen();
+        return;
       }
+      facecamEditing = true;
+      facecamOverlay.classList.add('on');
+      facecamToggleBtn.classList.add('on');
+      facecamToggleBtn.textContent = '✓ Done';
+      // Hide ALL THREE drag pins/bubbles while the crop box is open —
+      // avoids four overlapping draggables cluttering a small preview
+      // at once (the source-preview swap below also changes the video
+      // underneath entirely, so the other pins wouldn't line up anyway).
+      updatePipPositionVisibility();
+      updateCaptionPositionVisibility();
+      updateTopTextPositionVisibility();
+      showSourcePreviewForFacecam();
     });
 
     // Move the whole box by dragging its body (not a corner handle).
@@ -3068,6 +3089,10 @@
       // new (usage was already recorded when it was generated) — this gate
       // really only matters for the demo-fallback simulated render below.
       if(!checkUsageAllowed('upload')) return;
+      // If the facecam crop tool is still open, confirm it first —
+      // clicking Export/Download was itself one of the ways to silently
+      // abandon an unconfirmed crop (see confirmFacecamEditIfOpen()).
+      if(typeof confirmFacecamEditIfOpen === 'function') confirmFacecamEditIfOpen();
       // Flush any pending/in-flight style, facecam, or title edit first —
       // otherwise clicking Download right after a tweak could silently
       // grab the clip from BEFORE that edit was rendered in.
